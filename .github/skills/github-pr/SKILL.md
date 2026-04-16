@@ -11,7 +11,7 @@ Create and manage pull requests and branches in the Sunray Alfred fork.
 
 ## Repository setup
 
-- **Origin**: `origin` — your personal GitHub repo (`sunray-alfred`)
+- **Origin**: `origin` — GitHub fork [`autoditac/Sunray`](https://github.com/autoditac/Sunray)
 - **Upstream**: `upstream` — `https://github.com/Ardumower/Sunray.git`
 - **Default branch**: `main`
 
