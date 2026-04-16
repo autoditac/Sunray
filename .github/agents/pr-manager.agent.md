@@ -33,7 +33,7 @@ Load these skills before working:
 1. `git fetch upstream`
 2. `git rebase upstream/master` on `main`
 3. Resolve conflicts (common in `motor.cpp`, config files)
-4. Update per-mower configs if upstream added new options
+4. Update `configs/config.h` if upstream added new options
 5. Force-push with lease: `git push origin main --force-with-lease`
 
 ### Branch naming
@@ -44,4 +44,4 @@ Load these skills before working:
 ## Constraints
 - Never force-push without `--force-with-lease`
 - Always verify compilation after upstream rebase
-- Keep both mower configs updated when upstream adds new config options
+- Keep config updated when upstream adds new config options

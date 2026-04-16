@@ -23,23 +23,20 @@ Sunray is a C++ firmware for RTK-GPS robot mowers, originally targeting Arduino 
 ## Build System
 
 - **CMake** in `linux/` directory
-- Config selection: `cmake -DCONFIG_FILE=../../configs/robin.h ..`
+- Config selection: `cmake -DCONFIG_FILE=../../configs/config.h ..`
 - Default: copies `linux/config.h` → `sunray/config.h`
 - Source globs: all `sunray/**/*.cpp` + `linux/src/**/*.cpp` + `sunray/sunray.ino`
 - Excludes: `agcm4|due|esp` patterns (other platform targets)
 
 ## Config Management
 
-### Per-mower configs live in `configs/`
+### Shared config: `configs/config.h`
 
-| File | Mower | Key differences |
-|---|---|---|
-| `configs/robin.h` | Robin | WiFi credentials |
-| `configs/batman.h` | Batman | WiFi credentials, rain off, MOW_TOGGLE_DIR false |
+Single config file for all Alfred mowers. Customized copy of the upstream template `linux/config_alfred.h`.
 
-### Shared config base: `linux/config_alfred.h`
+### Upstream template: `linux/config_alfred.h`
 
-This is the upstream Alfred template. Per-mower configs are copies with mower-specific overrides.
+Reference file from upstream. When upstream adds new options, merge them into `configs/config.h`.
 
 ### Config conventions
 
@@ -83,7 +80,8 @@ When the inner wheel would be commanded slowly forward during a turn, drive it b
 - Multi-stage Dockerfile: `debian:bookworm-slim` builder + runtime
 - Build deps: cmake, g++, libbluetooth-dev, libssl-dev, libjpeg-dev
 - Runtime deps: libbluetooth3, libssl3, libjpeg62-turbo
-- Config passed via `--build-arg CONFIG_FILE=configs/<mower>.h`
+- Config hardcoded to `configs/config.h` in Dockerfile
+- Runtime on mowers via Podman/Quadlet (daemonless, native systemd)
 - Container runs privileged with host networking (serial, I2C, GPIO access)
 
 ## Testing

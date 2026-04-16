@@ -42,4 +42,4 @@ You are the main agent for the Sunray Alfred mower firmware project. You coordin
 1. Read the user's request and determine which specialist agent(s) to involve
 2. For cross-cutting tasks, break them down and delegate sequentially
 3. Always read relevant source files before making changes
-4. When in doubt, check `configs/robin.h` or `configs/batman.h` for current settings
+4. When in doubt, check `configs/config.h` for current settings

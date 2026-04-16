@@ -39,7 +39,7 @@ Load these skills before working:
 ### Modifying the build
 1. Read the current Dockerfile
 2. Make changes (add deps, modify stages, etc.)
-3. Test with a local build: `docker build --build-arg CONFIG_FILE=configs/robin.h -t test .`
+3. Test with a local build: `docker build -t test .`
 
 ### Modifying CI
 1. Read `.github/workflows/build.yml`
@@ -52,5 +52,5 @@ Load these skills before working:
 
 ## Constraints
 - Keep runtime image minimal — only install runtime dependencies
-- Always test both mower configs (robin + batman) in the matrix build
+- Always test the build after Dockerfile changes
 - Container must run privileged with host networking (serial, I2C, GPIO)
