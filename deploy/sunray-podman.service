@@ -1,0 +1,24 @@
+[Unit]
+Description=Sunray mower firmware (Podman)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/podman stop -t 10 sunray
+ExecStartPre=-/usr/bin/podman rm sunray
+ExecStart=/usr/bin/podman run \
+    --name sunray \
+    --rm \
+    --privileged \
+    --network host \
+    -e TZ=Europe/Copenhagen \
+    -v sunray-data:/opt/sunray/data \
+    -v /dev/serial:/dev/serial:ro \
+    ghcr.io/autoditac/sunray:latest
+ExecStop=/usr/bin/podman stop -t 10 sunray
+
+[Install]
+WantedBy=multi-user.target

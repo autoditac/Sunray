@@ -13,7 +13,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=ghcr.io/GITHUB_USER/sunray:latest
+Image=ghcr.io/autoditac/sunray:latest
 ContainerName=sunray
 Network=host
 SecurityLabelDisable=true
