@@ -1,0 +1,22 @@
+# Sunray Docker Compose for Alfred mower
+#
+# Deploy to mower:
+#   scp docker-compose.robin.yml robin:~/sunray/docker-compose.yml
+#   ssh robin "cd ~/sunray && docker compose pull && docker compose up -d"
+#
+# Replace GITHUB_USER below with your personal GitHub username.
+
+services:
+  sunray:
+    image: ghcr.io/GITHUB_USER/sunray-robin:latest
+    container_name: sunray
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    volumes:
+      - sunray-data:/opt/sunray/data
+    environment:
+      - TZ=Europe/Copenhagen
+
+volumes:
+  sunray-data:
