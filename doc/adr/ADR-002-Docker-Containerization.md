@@ -29,20 +29,38 @@ We want:
 
 ## Decision
 
+### Build (CI)
+
 Use **multi-stage Docker builds** with QEMU cross-compilation via `docker buildx`:
 
 - **Builder stage**: `debian:bookworm-slim` with build tools (cmake, g++, dev libraries)
 - **Runtime stage**: `debian:bookworm-slim` with only runtime libraries
 - **Config selection**: `--build-arg CONFIG_FILE=configs/<mower>.h`
 - **CI**: GitHub Actions with QEMU, matrix build for robin + batman, push to `ghcr.io`
-- **Deploy**: `docker compose pull && docker compose up -d` on each mower
 
 A custom `docker-entrypoint.sh` replaces `start_sunray.sh`, running only the Sunray binary with signal forwarding (no BLE, CAN, audio, or Docker detection).
+
+### Runtime (mowers)
+
+Use **Podman with Quadlet** on the RPi 4B instead of Docker:
+
+| Aspect | Docker | Podman (chosen) |
+|---|---|---|
+| Daemon | `dockerd` always running (~30-50MB RAM) | Daemonless — only runs when container runs |
+| Boot integration | docker.service + restart policy | Native systemd via Quadlet `.container` files |
+| Management | `docker compose` | `systemctl start/stop/status sunray` |
+| Auto-update | Manual `docker compose pull` | `podman auto-update` (checks registry, restarts) |
+| CLI | `docker` | Drop-in compatible |
+
+Podman is in the Debian Bookworm repos (`apt install podman`). Quadlet generates systemd units from `.container` files in `/etc/containers/systemd/`, giving native `systemctl` and `journalctl` integration with no daemon overhead.
 
 ## Consequences
 
 - Container must run **privileged** with **host networking** (serial `/dev/ttyS0`, I2C, GPS USB, port 80)
 - First Docker build takes ~10 min due to QEMU; subsequent builds use layer cache
-- Rollback: either pull previous image tag, or re-enable systemd service
+- Mower runtime uses Podman (daemonless) — saves ~30-50MB RAM vs Docker daemon
+- Updates via `podman auto-update` or `systemctl restart sunray` after manual pull
+- Rollback: `podman image list` → run previous tag, or re-enable native systemd service
 - The original `start_sunray.sh` remains untouched for non-Docker use
 - `sunray_manual.pdf` and other large files excluded via `.dockerignore`
+- CI builds with Docker; mowers run with Podman — OCI images are compatible

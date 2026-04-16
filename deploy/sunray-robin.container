@@ -1,0 +1,30 @@
+# Sunray Quadlet container unit for robin
+#
+# Deploy to mower:
+#   scp sunray-robin.container robin:/etc/containers/systemd/sunray.container
+#   ssh robin "systemctl daemon-reload && systemctl start sunray"
+#
+# Replace GITHUB_USER below with your GitHub username.
+# Image is built by GitHub Actions and pushed to ghcr.io.
+
+[Unit]
+Description=Sunray mower firmware (robin)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/GITHUB_USER/sunray-robin:latest
+ContainerName=sunray
+Network=host
+SecurityLabelDisable=true
+PodmanArgs=--privileged
+Volume=sunray-data:/opt/sunray/data
+Environment=TZ=Europe/Copenhagen
+AutoUpdate=registry
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

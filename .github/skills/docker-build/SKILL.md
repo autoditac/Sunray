@@ -43,47 +43,61 @@ The workflow at `.github/workflows/build.yml`:
 - Pushes to `ghcr.io/<owner>/sunray-<mower>:latest` and `:sha`
 - Uses GitHub Actions cache for layer caching
 
-## Deploy to mower
+## Deploy to mower (Podman + Quadlet)
+
+The mowers use **Podman** (daemonless) with **Quadlet** systemd integration instead of Docker.
 
 ### First-time setup (on the Pi)
 
 ```bash
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-# Log out and back in
-
-# Create working directory
-mkdir -p ~/sunray
-cd ~/sunray
-
-# Copy the docker-compose file (from workstation)
-# scp deploy/docker-compose.robin.yml robin:~/sunray/docker-compose.yml
+# Install Podman
+sudo apt update && sudo apt install -y podman
 
 # Login to GitHub Container Registry
-docker login ghcr.io -u <GITHUB_USER>
+podman login ghcr.io -u <GITHUB_USER>
 
-# Pull and start
-docker compose pull
-docker compose up -d
+# Copy the Quadlet file (from workstation)
+# scp deploy/sunray-robin.container robin:/etc/containers/systemd/sunray.container
+
+# Reload systemd and start
+sudo systemctl daemon-reload
+sudo systemctl start sunray
+sudo systemctl enable sunray  # auto-start on boot
 ```
 
 ### Update workflow
 
 ```bash
-ssh robin "cd ~/sunray && docker compose pull && docker compose up -d"
+# Automatic: podman checks ghcr.io for newer :latest and restarts
+ssh robin "sudo podman auto-update"
+
+# Manual:
+ssh robin "sudo podman pull ghcr.io/<user>/sunray-robin:latest && sudo systemctl restart sunray"
+```
+
+### Management
+
+```bash
+sudo systemctl status sunray    # check status
+sudo journalctl -u sunray -f    # follow logs
+sudo systemctl stop sunray      # stop
+sudo systemctl restart sunray   # restart
 ```
 
 ### Rollback
 
 ```bash
-# Roll back to previous image
-ssh robin "cd ~/sunray && docker compose down"
-ssh robin "docker run --privileged --network host ghcr.io/<user>/sunray-robin:<previous-sha>"
+# List available images
+ssh robin "sudo podman image list"
 
-# Or re-enable systemd service
-ssh robin "sudo systemctl enable sunray && sudo systemctl start sunray"
+# Edit the Quadlet file to pin a specific tag
+# Image=ghcr.io/<user>/sunray-robin:<previous-sha>
+ssh robin "sudo systemctl daemon-reload && sudo systemctl restart sunray"
 ```
+
+### Legacy: Docker Compose
+
+Docker Compose files (`deploy/docker-compose.*.yml`) are kept for backward compatibility but Podman/Quadlet is preferred.
 
 ## Container requirements
 
