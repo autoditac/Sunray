@@ -17,16 +17,14 @@ Build and modify the Sunray firmware for Alfred mowers running on RPi 4B (aarch6
 ```bash
 cd linux
 mkdir -p build && cd build
-cmake -DCONFIG_FILE=../../configs/robin.h ..
+cmake -DCONFIG_FILE=../../configs/config.h ..
 make -j$(nproc)
 ```
 
 ### Cross-compile via Docker (on x86_64 workstation)
 
 ```bash
-docker buildx build --platform linux/arm64 \
-  --build-arg CONFIG_FILE=configs/robin.h \
-  -t sunray-robin .
+docker buildx build --platform linux/arm64 -t sunray .
 ```
 
 ### Config selection
@@ -34,10 +32,10 @@ docker buildx build --platform linux/arm64 \
 The CMake build copies the config file to `sunray/config.h` before compiling:
 
 ```bash
-# Use a specific mower config
-cmake -DCONFIG_FILE=/path/to/configs/batman.h ..
+# Use the shared config (default in Dockerfile)
+cmake -DCONFIG_FILE=../../configs/config.h ..
 
-# Default (linux/config.h or linux/config_alfred.h)
+# Or use the upstream template directly
 cmake ..
 ```
 
@@ -85,8 +83,8 @@ Activates when inner wheel is slow but positive. Drives it backward proportional
 
 ## Adding a config option
 
-1. Add `#define` to `linux/config_alfred.h` (the template)
-2. Copy to both `configs/robin.h` and `configs/batman.h` (or diff-specific if per-mower)
+1. Add `#define` to `configs/config.h`
+2. Also add to `linux/config_alfred.h` as upstream reference
 3. Use `#ifdef` or `#if defined()` in source code to guard the feature
 4. Document the option's purpose and valid range in a comment next to the define
 

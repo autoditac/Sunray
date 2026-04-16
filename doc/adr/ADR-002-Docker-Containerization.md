@@ -16,7 +16,6 @@ We want:
 - Reproducible builds (same binary regardless of build host)
 - Remote updates without SSH + recompile
 - CI/CD pipeline for automated builds on push
-- Per-mower configuration without maintaining separate branches
 
 ### Options considered
 

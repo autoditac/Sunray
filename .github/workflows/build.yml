@@ -11,13 +11,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        mower:
-          - name: robin
-            config: configs/robin.h
-          - name: batman
-            config: configs/batman.h
     permissions:
       contents: read
       packages: write
@@ -43,9 +36,8 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          build-args: CONFIG_FILE=${{ matrix.mower.config }}
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/sunray-${{ matrix.mower.name }}:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/sunray-${{ matrix.mower.name }}:${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.mower.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.mower.name }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/sunray:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/sunray:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

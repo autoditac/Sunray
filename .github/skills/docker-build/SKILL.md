@@ -25,22 +25,20 @@ Build arm64 Docker images for Sunray and deploy them to Alfred mowers.
 
 ```bash
 # Build for native architecture (e.g., on the Pi itself)
-docker build --build-arg CONFIG_FILE=configs/robin.h -t sunray-robin .
+docker build -t sunray .
 
 # Cross-compile for arm64 from x86_64
 docker buildx create --use
-docker buildx build --platform linux/arm64 \
-  --build-arg CONFIG_FILE=configs/robin.h \
-  -t sunray-robin --load .
+docker buildx build --platform linux/arm64 -t sunray --load .
 ```
 
 ## GitHub Actions CI
 
 The workflow at `.github/workflows/build.yml`:
 - Triggers on push to `main`
-- Builds matrix: robin + batman configs
+- Builds a single image: `sunray`
 - Uses QEMU for arm64 emulation
-- Pushes to `ghcr.io/<owner>/sunray-<mower>:latest` and `:sha`
+- Pushes to `ghcr.io/<owner>/sunray:latest` and `:sha`
 - Uses GitHub Actions cache for layer caching
 
 ## Deploy to mower (Podman + Quadlet)
@@ -57,7 +55,7 @@ sudo apt update && sudo apt install -y podman
 podman login ghcr.io -u <GITHUB_USER>
 
 # Copy the Quadlet file (from workstation)
-# scp deploy/sunray-robin.container robin:/etc/containers/systemd/sunray.container
+# scp deploy/sunray.container <mower>:/etc/containers/systemd/sunray.container
 
 # Reload systemd and start
 sudo systemctl daemon-reload
@@ -72,7 +70,7 @@ sudo systemctl enable sunray  # auto-start on boot
 ssh robin "sudo podman auto-update"
 
 # Manual:
-ssh robin "sudo podman pull ghcr.io/<user>/sunray-robin:latest && sudo systemctl restart sunray"
+ssh <mower> "sudo podman pull ghcr.io/<user>/sunray:latest && sudo systemctl restart sunray"
 ```
 
 ### Management
@@ -91,7 +89,7 @@ sudo systemctl restart sunray   # restart
 ssh robin "sudo podman image list"
 
 # Edit the Quadlet file to pin a specific tag
-# Image=ghcr.io/<user>/sunray-robin:<previous-sha>
+# Image=ghcr.io/<user>/sunray:<previous-sha>
 ssh robin "sudo systemctl daemon-reload && sudo systemctl restart sunray"
 ```
 
@@ -118,10 +116,9 @@ Add to the `builder` stage `apt-get install` line.
 ### Adding a runtime dependency
 Add to the `runtime` stage `apt-get install` line. Keep runtime image minimal.
 
-### Changing the config build arg
-The `CONFIG_FILE` build arg is relative to the repo root:
+The `CONFIG_FILE` is hardcoded in the Dockerfile to `configs/config.h`:
 ```dockerfile
-ARG CONFIG_FILE=linux/config_alfred.h
+RUN cmake -DCONFIG_FILE=/build/Sunray/configs/config.h ..
 ```
 
 ## Troubleshooting

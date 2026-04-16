@@ -1,14 +1,14 @@
-# Sunray Docker Compose for Alfred mower
+# Sunray Docker Compose (legacy — prefer Podman/Quadlet)
 #
 # Deploy to mower:
-#   scp docker-compose.batman.yml batman:~/sunray/docker-compose.yml
-#   ssh batman "cd ~/sunray && docker compose pull && docker compose up -d"
+#   scp docker-compose.yml <mower>:~/sunray/docker-compose.yml
+#   ssh <mower> "cd ~/sunray && docker compose pull && docker compose up -d"
 #
 # Replace GITHUB_USER below with your personal GitHub username.
 
 services:
   sunray:
-    image: ghcr.io/GITHUB_USER/sunray-batman:latest
+    image: ghcr.io/GITHUB_USER/sunray:latest
     container_name: sunray
     restart: unless-stopped
     privileged: true

@@ -79,9 +79,9 @@ git push origin main --force-with-lease
 
 ### After rebase
 
-1. Update per-mower configs: check if upstream added new config options to `config_alfred.h`
-2. Copy new options to `configs/robin.h` and `configs/batman.h`
-3. Push and verify CI builds pass
+1. Check if upstream added new config options to `config_alfred.h`
+2. Merge new options into `configs/config.h`
+3. Push and verify CI build passes
 
 ## Versioning
 

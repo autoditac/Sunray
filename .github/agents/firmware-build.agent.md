@@ -28,20 +28,20 @@ Load these skills before working:
 
 ### Before editing code
 1. Read the target file to understand current state
-2. Check `configs/robin.h` and `configs/batman.h` for relevant config defines
+2. Check `configs/config.h` for relevant config defines
 3. Review `linux/config_alfred.h` for the upstream template
 
 ### Building
 ```bash
 cd linux && mkdir -p build && cd build
-cmake -DCONFIG_FILE=../../configs/robin.h ..
+cmake -DCONFIG_FILE=../../configs/config.h ..
 make -j$(nproc)
 ```
 
 ### Adding a feature
 1. Implement in the appropriate source file
 2. Guard with `#ifdef FEATURE_NAME` if it should be optional
-3. Add `#define FEATURE_NAME` to `linux/config_alfred.h`, `configs/robin.h`, `configs/batman.h`
+3. Add `#define FEATURE_NAME` to `configs/config.h` (and `linux/config_alfred.h` as reference)
 4. Verify compilation succeeds
 
 ### Modifying motor control
@@ -51,5 +51,5 @@ make -j$(nproc)
 
 ## Constraints
 - Never modify upstream files without documenting the patch in `docs/`
-- Always keep both mower configs in sync unless the change is mower-specific
+- Always keep the config in sync with `linux/config_alfred.h` when upstream changes
 - Use `#ifdef` guards for all optional features
