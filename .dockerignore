@@ -1,0 +1,12 @@
+.git
+*.blend1
+*.osm
+doc/
+heatmap/
+openocd/
+python/
+ros/
+tools/
+tts/
+ublox_f9p_configs/
+deploy/

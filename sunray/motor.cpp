@@ -183,6 +183,23 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    angularSpeedSet = angular;   
    float rspeed = linearSpeedSet + angularSpeedSet * (wheelBaseCm /100.0 /2);          
    float lspeed = linearSpeedSet - angularSpeedSet * (wheelBaseCm /100.0 /2);          
+   
+   // two-wheel turn: when inner wheel is slow but still forward, drive it backward  
+   // to prevent stalling on uneven terrain (only activates for forward turns, not pure rotation)
+   #ifdef TWO_WHEEL_TURN_SPEED_THRESHOLD
+   if (!maps.isUndocking() && !maps.isDocking()) {
+     if (angularSpeedSet > 0.01) { // turning left, left wheel is inner
+       if (lspeed > 0 && lspeed < TWO_WHEEL_TURN_SPEED_THRESHOLD) {
+         lspeed = -rspeed * TWO_WHEEL_TURN_INNER_FACTOR;
+       }
+     } else if (angularSpeedSet < -0.01) { // turning right, right wheel is inner
+       if (rspeed > 0 && rspeed < TWO_WHEEL_TURN_SPEED_THRESHOLD) {
+         rspeed = -lspeed * TWO_WHEEL_TURN_INNER_FACTOR;
+       }
+     }
+   }
+   #endif
+
    // RPM = V / (2*PI*r) * 60
    motorRightRpmSet =  rspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;   
    motorLeftRpmSet = lspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;   
