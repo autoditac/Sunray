@@ -31,7 +31,7 @@ You are the main agent for the Sunray Alfred mower firmware project. You coordin
 
 ## Project context
 
-- **Repo**: Sunray Alfred fork (aarch64 Linux)
+- **Repo**: [`autoditac/Sunray`](https://github.com/autoditac/Sunray) — GitHub fork of Ardumower/Sunray (aarch64 Linux)
 - **Mowers**: robin, batman (RPi 4B)
 - **Build**: CMake + gcc, Docker multi-stage with QEMU cross-compile
 - **CI**: GitHub Actions → ghcr.io
