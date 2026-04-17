@@ -77,7 +77,11 @@ void BridgeServer::run(){
 
 BridgeClient BridgeServer::available(){
   if(!_listening){
-    Serial.println("available(): not listening");
+    static bool loggedOnce = false;
+    if (!loggedOnce){
+      Serial.println("available(): not listening");
+      loggedOnce = true;
+    }
     return BridgeClient();
   }
   
@@ -110,6 +114,9 @@ void BridgeServer::begin(){
     Serial.println("socket error");    
     return;
   }
+  // Allow immediate port reuse after restart (avoids 'bind error' / 'not listening' spam)
+  int optval = 1;
+  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
   // connection will close immediately after closing the program; and next restart will be able to bind again.
   // https://stackoverflow.com/questions/24194961/how-do-i-use-setsockoptso-reuseaddr
   linger lin;
