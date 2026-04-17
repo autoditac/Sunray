@@ -188,21 +188,27 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    // the dead zone (0 .. MIN_WHEEL_SPEED) where there's not enough torque
    // to actually turn a heavy chassis like Alfred.
    //
-   // Any wheel in [0, MIN_WHEEL_SPEED) gets pushed to -MIN_WHEEL_SPEED
-   // (counter-rotate) so both wheels always contribute to turns.
-   // This covers all cases:
+   // Differential pivot fix for Alfred's nose-heavy chassis:
+   // During turns, only the outer wheel drives the rotation while the inner
+   // wheel sits near-stationary. The outer wheel alone can't generate enough
+   // traction to pivot the heavy front, so it spins freely and digs into
+   // soft ground. Fix: when the inner wheel would be idle (in [0, MIN_WHEEL_SPEED)),
+   // drive it backward so both wheels contribute turning torque.
+   //
+   // Cases:
    //   - Gentle turns (linear>0): both forward, outer faster (no change)
-   //   - Medium turns (linear>0): inner in dead zone → counter-rotate
-   //   - Rotation mode (linear=0): outer ~0.098 in dead zone → boost to MIN_WHEEL_SPEED
+   //   - Medium turns (linear>0): inner near-idle → counter-rotate
+   //   - Rotation mode (linear=0): both near-idle → drive opposite
    //   - Tight turns: inner already negative (no change)
-   //   - Standstill (both 0): no change (neither wheel > MIN_WHEEL_SPEED)
+   //   - Standstill (both 0): no change
    #ifdef MIN_WHEEL_SPEED
    if (!maps.isUndocking() && !maps.isDocking()) {
      float origL = lspeed;
      float origR = rspeed;
      bool adjusted = false;
      if (linearSpeedSet >= 0) {
-       // Forward motion or rotation: inner wheel in dead zone → counter-rotate
+       // Forward motion or rotation: inner wheel near-idle → drive backward
+       // to share turning load with outer wheel
        if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= MIN_WHEEL_SPEED) {
          lspeed = -MIN_WHEEL_SPEED;
          adjusted = true;
@@ -211,8 +217,8 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
          rspeed = -MIN_WHEEL_SPEED;
          adjusted = true;
        }
-       // Rotation mode: both wheels in dead zone (e.g. linear=0, angular small)
-       // → boost both to ensure actual movement
+       // Rotation mode: both wheels near-idle (e.g. linear=0, small angular)
+       // → drive opposite to ensure actual rotation
        if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= 0 && rspeed < MIN_WHEEL_SPEED
            && fabs(angularSpeedSet) > 0.01) {
          if (angularSpeedSet > 0) { // turning left
@@ -225,7 +231,7 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
          adjusted = true;
        }
      } else {
-       // Reverse motion: outer wheel (positive direction) in dead zone → counter-rotate
+       // Reverse motion: inner wheel near-idle → drive forward to share turning load
        if (lspeed <= 0 && lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
          lspeed = MIN_WHEEL_SPEED;
          adjusted = true;
