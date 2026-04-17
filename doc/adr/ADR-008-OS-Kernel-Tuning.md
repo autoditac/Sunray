@@ -70,3 +70,8 @@ This tells the kernel to strongly prefer evicting file cache over swapping out a
 |---|---|
 | `/etc/systemd/system/cpu-performance.service` | New: oneshot service to set governor=performance |
 | `/etc/sysctl.d/99-sunray.conf` | New: `vm.swappiness=10` |
+
+## References
+
+- [`0a5d8f9`](https://github.com/autoditac/Sunray/commit/0a5d8f9) — ADR-008 documentation
+- Host-side changes managed via [alfred-ansible](https://github.com/autoditac/alfred-ansible) role (`tuning` tag)

@@ -79,3 +79,8 @@ Created a small C helper (`linux/tools/serial_lowlatency.c`) that sets the `ASYN
 | `linux/tools/serial_lowlatency.c` | New: C helper to set ASYNC_LOW_LATENCY on serial ports |
 | `Dockerfile` | Builds and copies `serial_lowlatency` helper |
 | `docker-entrypoint.sh` | Runs `serial_lowlatency /dev/ttyS0` before starting sunray |
+
+## References
+
+- [`576f8d8`](https://github.com/autoditac/Sunray/commit/576f8d8) — Enable RT scheduling (SCHED_FIFO), mlockall, UART low_latency
+- [`0a5d8f9`](https://github.com/autoditac/Sunray/commit/0a5d8f9) — ADR-007 documentation

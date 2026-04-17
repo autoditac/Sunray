@@ -63,3 +63,9 @@ Podman is in the Debian Bookworm repos (`apt install podman`). Quadlet generates
 - The original `start_sunray.sh` remains untouched for non-Docker use
 - `sunray_manual.pdf` and other large files excluded via `.dockerignore`
 - CI builds with Docker; mowers run with Podman — OCI images are compatible
+
+## References
+
+- [`f9ea46a`](https://github.com/autoditac/Sunray/commit/f9ea46a) — Dockerfile, docker-entrypoint.sh, per-mower configs
+- [`42112fa`](https://github.com/autoditac/Sunray/commit/42112fa) — Podman Quadlet `.container` file for systemd integration
+- [`6f33945`](https://github.com/autoditac/Sunray/commit/6f33945) — Mermaid state diagram and Podman systemd service docs

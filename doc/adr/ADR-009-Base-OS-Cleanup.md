@@ -96,3 +96,8 @@ Avahi was initially removed but reinstalled per requirement for `.local` mDNS re
 | `apt-get autoremove --purge` | 616 packages removed |
 | `apt-get install avahi-daemon` | Reinstalled for mDNS |
 | `systemctl disable` | motion, wayvnc, bluetooth, ModemManager, gpsd, exim4 |
+
+## References
+
+- [`0a5d8f9`](https://github.com/autoditac/Sunray/commit/0a5d8f9) — ADR-009 documentation
+- Host-side changes managed via [alfred-ansible](https://github.com/autoditac/alfred-ansible) role
