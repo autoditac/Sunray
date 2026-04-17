@@ -7,9 +7,10 @@ Alfred mowers as **Docker/Podman containers** on a Raspberry Pi 4B.
 
 | Area | Upstream | This fork |
 |---|---|---|
-| **SBC** | BananaPi M1 (ships with Alfred) | Raspberry Pi 4B — stable WiFi, current Debian ([ADR-003](doc/adr/ADR-003-Raspberry-Pi-4B.md)) |
+| **Turning** | Three-point turns — mower digs into soft ground | Two-wheel differential turns on the spot ([ADR-004](doc/adr/ADR-004-Two-Wheel-Turn-Fix.md)) |
+| **SBC** | BananaPi M1 — unstable WiFi, outdated Debian | Raspberry Pi 4B — stable WiFi, current Debian ([ADR-003](doc/adr/ADR-003-Raspberry-Pi-4B.md)) |
 | **Deployment** | `start_sunray.sh` + native build on device | Multi-stage Docker image, deployed as Podman Quadlet ([ADR-002](doc/adr/ADR-002-Docker-Containerization.md)) |
-| **Main loop** | Forks shell commands (`Process::runShellCommand`) in the control loop | Shell calls removed — loop runs at 50 Hz instead of 1 Hz ([ADR-006](doc/adr/ADR-006-Process-Fork-Removal.md)) |
+| **Main loop** | Forks shell commands in the control loop (1 Hz) | Shell calls removed — loop runs at 50 Hz ([ADR-006](doc/adr/ADR-006-Process-Fork-Removal.md)) |
 | **Control interface** | Sunray Android/iOS app (TCP socket) | CaSSAndRA + Alfred Dashboard (HTTP). Sunray app is **not supported**. |
 | **MCU firmware** | Compiled on-device via Arduino IDE | Cross-compiled on x86_64 workstation, flashed via OpenOCD/SWD |
 | **Upstream sync** | — | GitHub fork, `main` rebased on upstream `master` ([ADR-001](doc/adr/ADR-001-Standalone-Fork-Strategy.md)) |
