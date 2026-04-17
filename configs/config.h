@@ -230,6 +230,7 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // client (app) --->  server (robot)
 #define ENABLE_SERVER true          // must be enabled if robot should act as server (recommended)
 //#define ENABLE_SERVER false           // must be disabled if robot should act as client (requires external relay server)
+#define HTTP_SERVER_LOCALHOST         // bind HTTP to 127.0.0.1 only (CaSSAndRA runs locally)
 
 // a relay server allows to access the robot via the Internet by transferring data from app to robot and vice versa (not available yet, highly experimental)
 // client (app) --->  relay server  <--- client (robot)
