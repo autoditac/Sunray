@@ -155,6 +155,27 @@ Key config options:
 
 Docking traverses stored dock points. Undocking reverses them.
 
+## Host OS Configuration (Alfred / RPi 4B)
+
+The Alfred mower runs Debian Trixie on a Raspberry Pi 4B. The host OS is tuned for headless real-time operation:
+
+### Real-Time Scheduling (ADR-007)
+- `SCHED_FIFO` on main thread (priority 65) and arduino-loop thread (priority 94)
+- `mlockall(MCL_CURRENT | MCL_FUTURE)` prevents page faults
+- UART `/dev/ttyS0` low-latency flag set via `serial_lowlatency` helper in container entrypoint
+
+### Kernel Tuning (ADR-008)
+- CPU governor: `performance` (constant 1.5 GHz) via `/etc/systemd/system/cpu-performance.service`
+- Swappiness: `10` via `/etc/sysctl.d/99-sunray.conf`
+
+### Minimal OS (ADR-009)
+616 packages removed (desktop, audio, camera, Bluetooth, modem, mail). Retained services:
+- systemd core (journald, timesyncd, udevd, logind)
+- NetworkManager + wpa_supplicant (WiFi)
+- avahi-daemon (mDNS: `batman.local`)
+- Podman (container runtime)
+- cron, dbus, agetty
+
 ## Version History (Alfred-relevant)
 
 | Version | Key Changes |
