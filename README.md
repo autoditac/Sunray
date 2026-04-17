@@ -40,6 +40,22 @@ Deployment is managed by the
 [alfred-ansible](https://github.com/autoditac/alfred-ansible) role, which
 handles OS tuning, Quadlet service files, OpenOCD configs, and MCU flashing.
 
+## Control interface
+
+The mower is controlled through two web apps, both running on the RPi as
+Podman containers alongside Sunray:
+
+- **[CaSSAndRA](https://github.com/EinEinfach/CaSSAndRA)** — full mower
+  management: map editing, mowing schedules, path planning, RTK corrections,
+  and firmware configuration. This is the primary interface for all complex
+  operations.
+- **[Alfred Dashboard](https://github.com/autoditac/alfred-dashboard)** —
+  lightweight status app showing live telemetry (GPS, battery, motor state,
+  WiFi signal). Designed for quick at-a-glance checks, not for control.
+
+The upstream Sunray Android/iOS app is **not supported** — its TCP socket
+protocol is not exposed outside the container.
+
 ## Architecture Decision Records
 
 | ADR | Title |
