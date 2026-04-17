@@ -103,9 +103,7 @@ class SerialBatteryDriver : public BatteryDriver {
     unsigned long nextADCTime;
     bool adcTriggered;
     unsigned long linuxShutdownTime;
-    #ifdef __linux__
-      Process batteryTempProcess;
-    #endif
+    // batteryTempProcess removed: was Process fork, now uses direct sysfs read
     SerialRobotDriver &serialRobot;
     SerialBatteryDriver(SerialRobotDriver &sr);
     void begin() override;

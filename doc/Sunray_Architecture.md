@@ -105,6 +105,27 @@ Map coordinates use **local ENU** (East-North-Up) relative to a base point.
 
 ## Communication
 
+### Linux Threading Model
+
+On Linux (Alfred), the firmware runs as a multi-threaded process (`linux/src/wiring_main.cpp`):
+
+| Thread | Name | Role |
+|---|---|---|
+| Main | `sunray` | `usleep(1000)` idle loop — just keeps the process alive |
+| Arduino loop | `arduino-loop` | Runs `setup()` + `loop()` with `usleep(300)` between iterations — **all firmware logic** |
+| BLE accept | `sunray` | Blocks on `accept()` for BLE socket connections |
+| HTTP accept | `arduino-loop` | Blocks on `accept()` for HTTP socket connections (port 80) |
+
+All serial I/O (STM32 UART, GPS USB) happens inline in the arduino-loop thread via non-blocking reads. The `LINUX_SERIAL_FIFO` option (which would create dedicated RX/TX threads per serial port) is **not defined** in the Alfred build, so serial data is processed byte-by-byte in the main loop via `ioctl(FIONREAD)` + `read()`.
+
+**Performance characteristics** (RPi 4B):
+- GPS ublox f9p at 115200 baud generates ~14K bytes/second → ~14K ioctl+read syscall pairs per loop
+- I2C LED panel updates: ~0.3ms per write, multiple writes per loop for 3 LEDs
+- Total syscall overhead: ~150ms/second
+- Designed loop frequency: ~50 Hz (20ms cycle for PID motor control)
+
+> **Warning**: `Process::runShellCommand()` forks a shell synchronously in the arduino-loop thread, blocking the entire main loop. Any call in the hot path will degrade loop frequency. See [ADR-006](adr/ADR-006-Process-Fork-Removal.md).
+
 ### HTTP Server (`httpserver.cpp`)
 - Serves the web API on port 80
 - Receives AT commands from Sunray App / CaSSAndRA
