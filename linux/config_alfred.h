@@ -363,7 +363,7 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // detect if robot is actually moving (obstacle detection via GPS feedback)
 #define GPS_MOTION_DETECTION          true    // if robot is not moving trigger obstacle avoidance
 //#define GPS_MOTION_DETECTION        false   // ignore if robot is not moving
-#define GPS_MOTION_DETECTION_TIMEOUT  5      // timeout for motion (secs)
+#define GPS_MOTION_DETECTION_TIMEOUT  12     // timeout for motion (secs) — 5s too short at 0.1 m/s during heading alignment
 
 // configure ublox f9p with optimal settings (will be stored in f9p RAM only)
 // NOTE: due to a PCB1.3 bug GPS_RX pin is not working and you have to fix this by a wire:
