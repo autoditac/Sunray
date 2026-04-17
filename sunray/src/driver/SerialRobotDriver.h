@@ -58,10 +58,6 @@ class SerialRobotDriver: public RobotDriver {
     bool setImuPowerState(bool state);
   protected:    
     bool ledPanelInstalled;
-    #ifdef __linux__
-      Process cpuTempProcess;
-      Process wifiStatusProcess;    
-    #endif
     String cmd;
     String cmdResponse;
     unsigned long nextMotorTime;    
