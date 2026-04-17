@@ -188,19 +188,66 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    // the dead zone (0 .. MIN_WHEEL_SPEED) where there's not enough torque
    // to actually turn a heavy chassis like Alfred.
    //
-   // If the unicycle model wants a wheel barely forward (in the dead zone),
-   // skip straight to counter-rotation at -MIN_WHEEL_SPEED so both wheels
-   // always contribute to the turn.  This covers all turn magnitudes:
-   //   - Gentle turns: both wheels forward, outer faster (no change)
-   //   - Medium turns: inner would stall → counter-rotate instead
-   //   - Tight turns:  inner already negative (no change)
+   // Any wheel in [0, MIN_WHEEL_SPEED) gets pushed to -MIN_WHEEL_SPEED
+   // (counter-rotate) so both wheels always contribute to turns.
+   // This covers all cases:
+   //   - Gentle turns (linear>0): both forward, outer faster (no change)
+   //   - Medium turns (linear>0): inner in dead zone → counter-rotate
+   //   - Rotation mode (linear=0): outer ~0.098 in dead zone → boost to MIN_WHEEL_SPEED
+   //   - Tight turns: inner already negative (no change)
+   //   - Standstill (both 0): no change (neither wheel > MIN_WHEEL_SPEED)
    #ifdef MIN_WHEEL_SPEED
-   if (linearSpeedSet > 0 && !maps.isUndocking() && !maps.isDocking()) {
-     if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed > MIN_WHEEL_SPEED) {
-       lspeed = -MIN_WHEEL_SPEED;
+   if (!maps.isUndocking() && !maps.isDocking()) {
+     float origL = lspeed;
+     float origR = rspeed;
+     bool adjusted = false;
+     if (linearSpeedSet >= 0) {
+       // Forward motion or rotation: inner wheel in dead zone → counter-rotate
+       if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= MIN_WHEEL_SPEED) {
+         lspeed = -MIN_WHEEL_SPEED;
+         adjusted = true;
+       }
+       if (rspeed >= 0 && rspeed < MIN_WHEEL_SPEED && lspeed >= MIN_WHEEL_SPEED) {
+         rspeed = -MIN_WHEEL_SPEED;
+         adjusted = true;
+       }
+       // Rotation mode: both wheels in dead zone (e.g. linear=0, angular small)
+       // → boost both to ensure actual movement
+       if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= 0 && rspeed < MIN_WHEEL_SPEED
+           && fabs(angularSpeedSet) > 0.01) {
+         if (angularSpeedSet > 0) { // turning left
+           rspeed = MIN_WHEEL_SPEED;
+           lspeed = -MIN_WHEEL_SPEED;
+         } else { // turning right
+           lspeed = MIN_WHEEL_SPEED;
+           rspeed = -MIN_WHEEL_SPEED;
+         }
+         adjusted = true;
+       }
+     } else {
+       // Reverse motion: outer wheel (positive direction) in dead zone → counter-rotate
+       if (lspeed <= 0 && lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
+         lspeed = MIN_WHEEL_SPEED;
+         adjusted = true;
+       }
+       if (rspeed <= 0 && rspeed > -MIN_WHEEL_SPEED && lspeed <= -MIN_WHEEL_SPEED) {
+         rspeed = MIN_WHEEL_SPEED;
+         adjusted = true;
+       }
      }
-     if (rspeed >= 0 && rspeed < MIN_WHEEL_SPEED && lspeed > MIN_WHEEL_SPEED) {
-       rspeed = -MIN_WHEEL_SPEED;
+     if (adjusted) {
+       CONSOLE.print("MIN_WHEEL_SPEED adj: lin=");
+       CONSOLE.print(linearSpeedSet, 3);
+       CONSOLE.print(" ang=");
+       CONSOLE.print(angularSpeedSet, 3);
+       CONSOLE.print(" L:");
+       CONSOLE.print(origL, 3);
+       CONSOLE.print("->");
+       CONSOLE.print(lspeed, 3);
+       CONSOLE.print(" R:");
+       CONSOLE.print(origR, 3);
+       CONSOLE.print("->");
+       CONSOLE.println(rspeed, 3);
      }
    }
    #endif
@@ -208,14 +255,6 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    // RPM = V / (2*PI*r) * 60
    motorRightRpmSet =  rspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;   
    motorLeftRpmSet = lspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;   
-   /*CONSOLE.print("setLinearAngularSpeed ");
-   CONSOLE.print(linear);
-   CONSOLE.print(",");
-   CONSOLE.print(angular); 
-   CONSOLE.print(",");
-   CONSOLE.print(motorLeftRpmSet);
-   CONSOLE.print(",");
-   CONSOLE.println(motorRightRpmSet);*/
 }
 
 
