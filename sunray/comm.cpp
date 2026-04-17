@@ -1047,11 +1047,12 @@ void Comm::cmdCamera() {
 
 // process console input
 void Comm::processConsole(){
-  char ch;      
+  int ch;      
   if (CONSOLE.available()){
     battery.resetIdle();  
     while ( CONSOLE.available() ){               
-      ch = CONSOLE.read();          
+      ch = CONSOLE.read();
+      if (ch < 0) break;  // EOF or error
       if ((ch == '\r') || (ch == '\n')) {        
         CONSOLE.print("CON:");
         CONSOLE.println(cmd);
