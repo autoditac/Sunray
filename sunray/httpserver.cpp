@@ -65,7 +65,9 @@ HttpServer::HttpServer()
 {}
 
 void HttpServer::begin(){
-  //server.listenOnLocalhost(); // optional
+  #ifdef HTTP_SERVER_LOCALHOST
+  server.listenOnLocalhost();
+  #endif
   server.begin();
 }
 

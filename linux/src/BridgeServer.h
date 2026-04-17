@@ -26,6 +26,7 @@ class BridgeServer : public Server {
     uint16_t _port;
     uint8_t _max_clients;
     bool _listening;
+    bool _localhost_only;
     BridgeServerHandler _cb;
     BridgeClient *clients;
 
@@ -33,9 +34,9 @@ class BridgeServer : public Server {
     void cleanup();
     int setSocketOption(int option, char* value, size_t len);
   public:
-    void listenOnLocalhost(){}
+    void listenOnLocalhost(){ _localhost_only = true; }
 
-    BridgeServer(uint16_t port=80, uint8_t max_clients=8):sockfd(-1),pollfd(0),events(NULL),_port(port),_max_clients(max_clients),_listening(false),_cb(NULL),clients(NULL){}
+    BridgeServer(uint16_t port=80, uint8_t max_clients=8):sockfd(-1),pollfd(0),events(NULL),_port(port),_max_clients(max_clients),_listening(false),_localhost_only(false),_cb(NULL),clients(NULL){}
     ~BridgeServer(){ end();}
     BridgeClient available();
     BridgeClient accept(){return available();}
