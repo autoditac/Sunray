@@ -118,8 +118,9 @@ void BridgeServer::begin(){
   setsockopt(sockfd, SOL_SOCKET, SO_LINGER, (const char *)&lin, sizeof(int));
 
   server.sin_family = AF_INET;
-  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_addr.s_addr = _localhost_only ? htonl(INADDR_LOOPBACK) : INADDR_ANY;
   server.sin_port = htons(_port);
+  Serial.printf("bind address: %s\n", _localhost_only ? "127.0.0.1" : "0.0.0.0");
   if(bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0){
     Serial.printf("bind error port %d\n",_port);
     return;
