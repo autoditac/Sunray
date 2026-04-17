@@ -192,40 +192,24 @@ float SerialRobotDriver::getCpuTemperature(){
 
 void SerialRobotDriver::updateCpuTemperature(){
   #ifdef __linux__
-    //unsigned long startTime = millis();
-    String s;        
-    while (cpuTempProcess.available()) s+= (char)cpuTempProcess.read();
-    if (s.length() > 0) {
-      cpuTemp = s.toFloat() / 1000.0;    
-      //CONSOLE.print("updateCpuTemperature cpuTemp=");
-      //CONSOLE.println(cpuTemp);
+    // Read CPU temperature directly from sysfs (non-blocking, no fork).
+    // The old approach used Process::runShellCommand("cat ...") which forked a shell,
+    // blocking the main loop for 10-50ms and disrupting the PID control cycle.
+    FILE *f = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
+    if (f) {
+      char buf[16];
+      if (fgets(buf, sizeof(buf), f)) {
+        cpuTemp = atof(buf) / 1000.0;
+      }
+      fclose(f);
     }
-    cpuTempProcess.runShellCommand("cat /sys/class/thermal/thermal_zone0/temp");      
-    //unsigned long duration = millis() - startTime;        
-    //CONSOLE.print("updateCpuTemperature duration: ");
-    //CONSOLE.println(duration);        
   #endif
 }
 
 void SerialRobotDriver::updateWifiConnectionState(){
-  #ifdef __linux__
-    //unsigned long startTime = millis();   
-    String s; 
-    while (wifiStatusProcess.available()) s+= (char)wifiStatusProcess.read(); 
-    if (s.length() > 0){    
-      s.trim();
-      //CONSOLE.print("updateWifiConnectionState state=");
-      //CONSOLE.println(s);
-      // DISCONNECTED, SCANNING, INACTIVE, COMPLETED 
-      //CONSOLE.println(s);
-      ledStateWifiConnected = (s == "COMPLETED");
-      ledStateWifiInactive = (s == "INACTIVE");                   
-    }  
-    wifiStatusProcess.runShellCommand("wpa_cli -i wlan0 status | grep wpa_state | cut -d '=' -f2");  
-    //unsigned long duration = millis() - startTime;        
-    //CONSOLE.print("updateWifiConnectionState duration: ");
-    //CONSOLE.println(duration);
-  #endif
+  // Disabled: WiFi monitoring was a BananaPi-era feature using wpa_cli (not available
+  // in containers). The host OS manages WiFi; the firmware has no business interfering.
+  // WiFi signal strength is still reported separately via WiFiClass at startup.
 }
 
 // send serial request to MCU
@@ -528,7 +512,7 @@ void SerialRobotDriver::run(){
     updatePanelLEDs();
   }
   if (millis() > nextTempTime){
-    nextTempTime = millis() + 59000; // 59 sec
+    nextTempTime = millis() + 30000; // 30 sec (cheap sysfs read, no fork)
     updateCpuTemperature();
     if (cpuTemp < 60){      
       setFanPowerState(false);
