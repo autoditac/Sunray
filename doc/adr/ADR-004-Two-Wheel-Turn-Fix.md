@@ -21,7 +21,7 @@ During a turn, the outer wheel speeds up while the inner wheel slows to near-zer
 
 Alfred has a nose-heavy weight distribution. The single outer wheel often cannot generate enough traction to pivot this heavy front end. It spins freely, losing grip and digging ruts into soft ground instead of turning the mower. This is one of the most common complaints from Alfred owners — the mower buries itself on turns, especially on wet or uneven terrain.
 
-The batman mower exhibited this problem repeatedly — the outer wheel would spin and dig, the mower wouldn't turn, triggering GPS timeout recovery loops and leaving it stuck.
+Our test mower exhibited this problem repeatedly — the outer wheel would spin and dig, the mower wouldn't turn, triggering GPS timeout recovery loops and leaving it stuck.
 
 ### Root cause analysis
 

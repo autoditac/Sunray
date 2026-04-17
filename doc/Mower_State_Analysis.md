@@ -1,13 +1,13 @@
-# Mower State Analysis: Robin & Batman
+# Mower State Analysis: Mower-B & Mower-A
 
 ## Date: 2026-04-16
 
 ---
 
-## Robin (ssh robin)
+## Mower-B (ssh mower-b)
 
 ### System
-- **Hostname**: robin
+- **Hostname**: mower-b
 - **OS**: Debian GNU/Linux 12 (bookworm)
 - **Arch**: aarch64 (Raspberry Pi 4B)
 - **Kernel**: 6.12.25+rpt-rpi-v8
@@ -28,7 +28,7 @@
 1. **`sunray/src/op/Op.cpp`**: Removed `RelocalizationOp` instance and `onRelocalization()` method
 2. **`sunray/src/op/RelocalizationOp.cpp`**: **Deleted entirely**
 
-**Purpose**: RelocalizationOp was added for lidar-based relocalization. Robin doesn't use lidar, so this was removed - possibly to fix a compilation error or unwanted behavior.
+**Purpose**: RelocalizationOp was added for lidar-based relocalization. Mower-B doesn't use lidar, so this was removed - possibly to fix a compilation error or unwanted behavior.
 
 **Risk**: Upstream still has RelocalizationOp. This change will need to be reconciled - either by keeping the removal (if no lidar) or by leaving it in (it should only activate if lidar calls it).
 
@@ -49,16 +49,16 @@
 
 ---
 
-## Batman (ssh batman)
+## Mower-A (ssh mower-a)
 
 ### System
-- **Hostname**: batman
+- **Hostname**: mower-a
 - **OS**: Debian GNU/Linux 12 (bookworm)
 - **Arch**: aarch64 (Raspberry Pi 4B)
 - **Kernel**: 6.12.20+rpt-rpi-v8
 
 ### Sunray State
-- **Base commit**: `d934b50` (add ublox decode test) — much older than robin!
+- **Base commit**: `d934b50` (add ublox decode test) — much older than mower-b!
 - **Active branch**: `feature/backport_fixes_for_failing_map_upload`
 - **Commits behind upstream**: **574** (!) — very far behind
 - **Repo structure**: Uses `alfred/` directory
@@ -91,15 +91,15 @@
 - RAIN_ENABLE true               → false
 ```
 
-### Config Differences vs Robin
-| Setting | Robin | Batman | Notes |
+### Config Differences vs Mower-B
+| Setting | Mower-B | Mower-A | Notes |
 |---------|-------|--------|-------|
-| ENABLE_LIFT_DETECTION | 1 (enabled) | commented out | Batman disabled lift sensor |
+| ENABLE_LIFT_DETECTION | 1 (enabled) | commented out | Mower-A disabled lift sensor |
 | LIFT_OBSTACLE_AVOIDANCE | 1 (enabled) | commented out | |
-| MOW_TOGGLE_DIR | true | false | Batman: always same direction |
-| RAIN_ENABLE | true | false | Batman: ignore rain |
-| BUZZER_ENABLE | 1 | (missing/changed) | Batman modified buzzer |
-| NTRIP_HOST | www.sapos-nw-ntrip.de | 195.227.70.119 | Batman uses IP directly |
+| MOW_TOGGLE_DIR | true | false | Mower-A: always same direction |
+| RAIN_ENABLE | true | false | Mower-A: ignore rain |
+| BUZZER_ENABLE | 1 | (missing/changed) | Mower-A modified buzzer |
+| NTRIP_HOST | www.sapos-nw-ntrip.de | 195.227.70.119 | Mower-A uses IP directly |
 
 ### Feature Branches (inactive but present)
 - `feature/two-wheel-turn` - Custom motor control for inner wheel reverse during turns
@@ -107,12 +107,12 @@
 
 ---
 
-## Upstream Changes Analysis (since batman's base d934b50)
+## Upstream Changes Analysis (since mower-a's base d934b50)
 
 ### 574 commits of upstream changes. Key areas:
 
-#### Already Incorporated Upstream (batman's fixes merged!)
-Many of batman's custom changes have been **independently implemented upstream**:
+#### Already Incorporated Upstream (mower-a's fixes merged!)
+Many of mower-a's custom changes have been **independently implemented upstream**:
 - ✅ `Point` type changed to `float` on Linux (`map.h`)
 - ✅ `getDockingPos` with idx parameter
 - ✅ `DOCK_FRONT_SIDE` support in map.cpp
@@ -136,11 +136,11 @@ Many of batman's custom changes have been **independently implemented upstream**
 - MOTOR_MOW_SWAP_DIRECTION config option
 
 #### Potential Conflict Areas
-1. **`httpserver.cpp`**: Completely refactored upstream → batman's wifi verbose changes cannot be cherry-picked cleanly. However, batman's approach (wait for client available) may no longer be needed with the upstream refactoring.
+1. **`httpserver.cpp`**: Completely refactored upstream → mower-a's wifi verbose changes cannot be cherry-picked cleanly. However, mower-a's approach (wait for client available) may no longer be needed with the upstream refactoring.
 
-2. **`map.cpp/map.h`**: Most of batman's changes are already upstream. Clean merge expected.
+2. **`map.cpp/map.h`**: Most of mower-a's changes are already upstream. Clean merge expected.
 
-3. **RelocalizationOp** (robin): Upstream still has it. It's harmless if lidar isn't used - recommend keeping it.
+3. **RelocalizationOp** (mower-b): Upstream still has it. It's harmless if lidar isn't used - recommend keeping it.
 
 4. **Motor two-wheel-turn** (feature branch): Not upstream. Clean patch against motor.cpp - should apply with minor adjustments.
 
@@ -148,7 +148,7 @@ Many of batman's custom changes have been **independently implemented upstream**
 
 ## Summary
 
-| Aspect | Robin | Batman |
+| Aspect | Mower-B | Mower-A |
 |--------|-------|--------|
 | Base commit | 30630f1 (~mid 2025) | d934b50 (~late 2024) |
 | Behind upstream | 152 commits | 574 commits |

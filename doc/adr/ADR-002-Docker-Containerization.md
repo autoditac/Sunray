@@ -35,7 +35,7 @@ Use **multi-stage Docker builds** with QEMU cross-compilation via `docker buildx
 - **Builder stage**: `debian:bookworm-slim` with build tools (cmake, g++, dev libraries)
 - **Runtime stage**: `debian:bookworm-slim` with only runtime libraries
 - **Config selection**: `--build-arg CONFIG_FILE=configs/<mower>.h`
-- **CI**: GitHub Actions with QEMU, matrix build for robin + batman, push to `ghcr.io`
+- **CI**: GitHub Actions with QEMU, matrix build per mower config, push to `ghcr.io`
 
 A custom `docker-entrypoint.sh` replaces `start_sunray.sh`, running only the Sunray binary with signal forwarding (no BLE, CAN, audio, or Docker detection).
 

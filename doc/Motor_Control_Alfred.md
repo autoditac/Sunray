@@ -144,7 +144,7 @@ Where L = wheelBaseCm/100 (m), V = linear speed (m/s), omega = angular speed (ra
 
 ## Two-Wheel Turn (Custom Feature)
 
-A custom patch (on batman's `feature/two-wheel-turn` branch) modifies the unicycle model to allow the inner wheel to drive **backward** during tight turns. This prevents the mower from pivoting on one wheel, reducing turf damage:
+A custom patch modifies the unicycle model to allow the inner wheel to drive **backward** during tight turns. This prevents the mower from pivoting on one wheel, reducing turf damage:
 
 ```cpp
 // If inner wheel speed drops below threshold, reverse it proportionally

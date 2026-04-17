@@ -10,7 +10,7 @@
 
 ## Context
 
-After deploying the containerized Sunray firmware on batman (RPi 4B), the main loop ran at **1 Hz instead of ~50 Hz**, causing PID cycle time warnings (`Ta=1.01 TaMax=0.10`) and unmet motor communication frequency (`motorFreq=1/1`).
+After deploying the containerized Sunray firmware on an RPi 4B, the main loop ran at **1 Hz instead of ~50 Hz**, causing PID cycle time warnings (`Ta=1.01 TaMax=0.10`) and unmet motor communication frequency (`motorFreq=1/1`).
 
 ### Investigation
 

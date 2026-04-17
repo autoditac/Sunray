@@ -172,7 +172,7 @@ The Alfred mower runs Debian Trixie on a Raspberry Pi 4B. The host OS is tuned f
 616 packages removed (desktop, audio, camera, Bluetooth, modem, mail). Retained services:
 - systemd core (journald, timesyncd, udevd, logind)
 - NetworkManager + wpa_supplicant (WiFi)
-- avahi-daemon (mDNS: `batman.local`)
+- avahi-daemon (mDNS: `.local` resolution)
 - Podman (container runtime)
 - cron, dbus, agetty
 

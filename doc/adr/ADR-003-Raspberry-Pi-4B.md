@@ -44,7 +44,7 @@ The upstream `swd-pi.ocd` is configured for BananaPi GPIO numbers. For RPi 4B, u
 
 ## Consequences
 
-- Both mowers (robin, batman) run RPi 4B with identical hardware
+- Both mowers run RPi 4B with identical hardware
 - Debian Bookworm provides Podman in repos (enables container-based deployment)
 - GPS ublox f9p USB connection works identically (same `/dev/serial/by-id/` path)
 - IO board I2C works identically (`/dev/i2c-1`)

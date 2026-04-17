@@ -1,4 +1,4 @@
-# Update & Docker Deployment Plan for Robin & Batman
+# Update & Docker Deployment Plan for Mower-B & Mower-A
 
 ## Goals
 1. Update both mowers to latest Sunray firmware (1.0.331+)
@@ -29,14 +29,14 @@ upstream/master  ← track official releases
        ▼
   main (your fork)  ← rebased on upstream, carries your patches
        │
-       ├── config/robin    ← robin-specific config.h
-       ├── config/batman   ← batman-specific config.h
+       ├── config/mower-b    ← mower-b-specific config.h
+       ├── config/mower-a   ← mower-a-specific config.h
        │
        └── feature/two-wheel-turn  ← optional motor enhancement
 ```
 
 ### 1.3 Custom Patches to Carry Forward
-Since most of batman's map/dock fixes are already upstream, the remaining custom changes are minimal:
+Since most of mower-a's map/dock fixes are already upstream, the remaining custom changes are minimal:
 
 **Shared code patch (both mowers):**
 - **Two-wheel-turn fix** in `sunray/motor.cpp` — NEW improved implementation (see below)
@@ -48,11 +48,11 @@ Since most of batman's map/dock fixes are already upstream, the remaining custom
 - Two-wheel-turn config defines added (`TWO_WHEEL_TURN_SPEED_THRESHOLD`, `TWO_WHEEL_TURN_INNER_FACTOR`)
 
 **Per-mower config differences:**
-- Robin: WiFi credentials, hostname
-- Batman: WiFi credentials, hostname, rain detection disabled, `MOW_TOGGLE_DIR false`
+- Mower-B: WiFi credentials, hostname
+- Mower-A: WiFi credentials, hostname, rain detection disabled, `MOW_TOGGLE_DIR false`
 
 ### 1.4 Two-Wheel-Turn Fix (Analysis & New Implementation)
-Batman's original implementation had 3 bugs:
+Mower-A's original implementation had 3 bugs:
 1. **Threshold too low** (0.02 m/s) — never triggered during gentle mowing curves where stalling actually occurs
 2. **Triggered during pure rotation** when inner wheel was already going backward, then REDUCED the backward speed via the -0.05 cap
 3. **Backward speed too conservative** — -0.05 m/s is barely driveable for the PID controller
@@ -177,10 +177,10 @@ jobs:
     strategy:
       matrix:
         config:
-          - name: robin
-            file: configs/robin/config.h
-          - name: batman
-            file: configs/batman/config.h
+          - name: mower-b
+            file: configs/mower-b/config.h
+          - name: mower-a
+            file: configs/mower-a/config.h
     steps:
       - uses: actions/checkout@v4
       
@@ -211,10 +211,10 @@ jobs:
 Store per-mower configs in the fork:
 ```
 configs/
-  robin/
-    config.h      ← robin-specific config
-  batman/
-    config.h      ← batman-specific config
+  mower-b/
+    config.h      ← mower-b-specific config
+  mower-a/
+    config.h      ← mower-a-specific config
 ```
 
 ---
@@ -239,8 +239,8 @@ sudo apt install docker-compose-plugin
    cp ~/Sunray/alfred/map.bin ~/backup/
    cp ~/Sunray/alfred/state.bin ~/backup/
    # Save current config
-   cp ~/Sunray/sunray/config.h ~/backup/config.h.bak  # robin
-   cp ~/Sunray/alfred/config.h ~/backup/config.h.bak   # batman
+   cp ~/Sunray/sunray/config.h ~/backup/config.h.bak  # mower-b
+   cp ~/Sunray/alfred/config.h ~/backup/config.h.bak   # mower-a
    ```
 
 2. **Stop old service**:
@@ -289,8 +289,8 @@ GitHub Actions will automatically build new images on push.
 
 ### Updating Mowers
 ```bash
-ssh robin 'cd ~/sunray-docker && docker compose pull && docker compose up -d'
-ssh batman 'cd ~/sunray-docker && docker compose pull && docker compose up -d'
+ssh mower-b 'cd ~/sunray-docker && docker compose pull && docker compose up -d'
+ssh mower-a 'cd ~/sunray-docker && docker compose pull && docker compose up -d'
 ```
 
 ---
@@ -320,7 +320,7 @@ ssh batman 'cd ~/sunray-docker && docker compose pull && docker compose up -d'
 | Adapt start_sunray.sh for Docker | Small |
 | Set up GitHub Actions | Medium |
 | First cross-compile build (QEMU arm64) | Medium (build time) |
-| Deploy to robin (easier, less changes) | Small |
-| Deploy to batman | Small |
+| Deploy to mower-b (easier, less changes) | Small |
+| Deploy to mower-a | Small |
 | Test & validate both mowers | Medium |
 | Port two-wheel-turn to latest (optional) | Small-Medium |
