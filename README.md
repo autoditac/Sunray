@@ -52,6 +52,7 @@ handles OS tuning, Quadlet service files, OpenOCD configs, and MCU flashing.
 | [ADR-007](doc/adr/ADR-007-Realtime-Scheduling.md) | Realtime Scheduling |
 | [ADR-008](doc/adr/ADR-008-OS-Kernel-Tuning.md) | OS Kernel Tuning |
 | [ADR-009](doc/adr/ADR-009-Base-OS-Cleanup.md) | Base OS Cleanup |
+| [ADR-010](doc/adr/ADR-010-WiFi-Management-OS-Level.md) | WiFi Management at OS Level |
 
 ## Upstream
 
