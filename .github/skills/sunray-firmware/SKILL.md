@@ -75,8 +75,7 @@ Where `L` = wheelBaseCm/100, `r` = wheelDiameter/2000
 
 ### Two-wheel-turn (custom patch)
 ```c
-#define TWO_WHEEL_TURN_SPEED_THRESHOLD  0.12  // inner wheel speed below which turn activates
-#define TWO_WHEEL_TURN_INNER_FACTOR     0.3   // backward speed as fraction of outer wheel
+#define MIN_WHEEL_SPEED  0.05  // minimum wheel speed (m/s) to maintain traction on Alfred's heavy nose
 ```
 
 Activates when inner wheel is slow but positive. Drives it backward proportionally. Excluded during docking/undocking. Guarded by `#ifdef`.
