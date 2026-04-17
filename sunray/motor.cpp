@@ -184,21 +184,23 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    float rspeed = linearSpeedSet + angularSpeedSet * (wheelBaseCm /100.0 /2);          
    float lspeed = linearSpeedSet - angularSpeedSet * (wheelBaseCm /100.0 /2);          
    
-   // two-wheel turn: when inner wheel is near stall, drive it backward  
-   // to prevent stalling on uneven terrain (only activates for significant turns, not small Stanley corrections)
-   #ifdef TWO_WHEEL_TURN_SPEED_THRESHOLD
-   if (!maps.isUndocking() && !maps.isDocking()) {
-     float absAngular = fabs(angularSpeedSet);
-     if (absAngular > TWO_WHEEL_TURN_MIN_ANGULAR) { // only during significant turns
-       if (angularSpeedSet > 0) { // turning left, left wheel is inner
-         if (lspeed > 0 && lspeed < TWO_WHEEL_TURN_SPEED_THRESHOLD) {
-           lspeed = -rspeed * TWO_WHEEL_TURN_INNER_FACTOR;
-         }
-       } else { // turning right, right wheel is inner
-         if (rspeed > 0 && rspeed < TWO_WHEEL_TURN_SPEED_THRESHOLD) {
-           rspeed = -lspeed * TWO_WHEEL_TURN_INNER_FACTOR;
-         }
-       }
+   // Minimum wheel speed guarantee: prevent either wheel from sitting in
+   // the dead zone (0 .. MIN_WHEEL_SPEED) where there's not enough torque
+   // to actually turn a heavy chassis like Alfred.
+   //
+   // If the unicycle model wants a wheel barely forward (in the dead zone),
+   // skip straight to counter-rotation at -MIN_WHEEL_SPEED so both wheels
+   // always contribute to the turn.  This covers all turn magnitudes:
+   //   - Gentle turns: both wheels forward, outer faster (no change)
+   //   - Medium turns: inner would stall → counter-rotate instead
+   //   - Tight turns:  inner already negative (no change)
+   #ifdef MIN_WHEEL_SPEED
+   if (linearSpeedSet > 0 && !maps.isUndocking() && !maps.isDocking()) {
+     if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed > MIN_WHEEL_SPEED) {
+       lspeed = -MIN_WHEEL_SPEED;
+     }
+     if (rspeed >= 0 && rspeed < MIN_WHEEL_SPEED && lspeed > MIN_WHEEL_SPEED) {
+       rspeed = -MIN_WHEEL_SPEED;
      }
    }
    #endif

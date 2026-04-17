@@ -154,11 +154,11 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 
 #define MOTOR_OVERLOAD_SPEED  0.1    // speed (m/s) to use at motor overload
 
-// two-wheel turn: when the inner wheel would be commanded very slowly forward during a turn,
-// drive it backward instead to prevent stalling on uneven terrain (useful for heavy-front-chassis like Alfred)
-#define TWO_WHEEL_TURN_SPEED_THRESHOLD  0.02   // inner wheel forward speed (m/s) below which two-wheel turn activates (must be << setSpeed)
-#define TWO_WHEEL_TURN_INNER_FACTOR     0.3    // inner wheel backward speed as fraction of outer wheel speed
-#define TWO_WHEEL_TURN_MIN_ANGULAR      0.2    // minimum angular speed (rad/s, ~11°/s) to activate — prevents triggering on small Stanley corrections
+// Minimum wheel speed guarantee: when the unicycle model would command
+// a wheel slower than this (but still forward), skip the dead zone and
+// counter-rotate at -MIN_WHEEL_SPEED instead.  Prevents stalling on
+// heavy-nose chassis like Alfred where one slow wheel can't turn alone.
+#define MIN_WHEEL_SPEED  0.05  // m/s — wheels below this can't move Alfred's nose
 
 //#define USE_LINEAR_SPEED_RAMP  true      // use a speed ramp for the linear speed
 #define USE_LINEAR_SPEED_RAMP  false      // do not use a speed ramp 
