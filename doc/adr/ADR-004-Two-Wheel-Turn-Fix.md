@@ -10,23 +10,25 @@
 
 ## Context
 
-Alfred mowers use a unicycle kinematic model where only one wheel drives the turn — the inner wheel slows down while the outer wheel maintains speed:
+Alfred mowers use a unicycle kinematic model where turns are driven by a speed differential between the two rear wheels:
 
 ```
 VR = V + omega * L/2
 VL = V - omega * L/2
 ```
 
-Alfred's heavy front (nose-heavy weight distribution) means the single driving wheel often lacks the traction to pivot the entire mower. The inner wheel is commanded at a low positive speed near zero, but ground resistance exceeds the available torque. The wheel spins freely without gripping, digging into soft ground instead of turning the mower. This is one of the most common complaints from Alfred owners — the mower buries itself on turns, especially on wet or uneven terrain.
+During a turn, the outer wheel speeds up while the inner wheel slows to near-zero. This means effectively **only the outer wheel drives the turn** — the inner wheel is near-stationary and contributes no turning torque.
 
-The batman mower exhibited this problem repeatedly — the turning wheel would spin and dig ruts, triggering GPS timeout recovery loops and leaving the mower stuck.
+Alfred has a nose-heavy weight distribution. The single outer wheel often cannot generate enough traction to pivot this heavy front end. It spins freely, losing grip and digging ruts into soft ground instead of turning the mower. This is one of the most common complaints from Alfred owners — the mower buries itself on turns, especially on wet or uneven terrain.
+
+The batman mower exhibited this problem repeatedly — the outer wheel would spin and dig, the mower wouldn't turn, triggering GPS timeout recovery loops and leaving it stuck.
 
 ### Root cause analysis
 
 Three issues in the original code path:
-1. Only one wheel drives the turn — the other is near-stationary and provides no torque
-2. The heavy nose requires significant force to pivot, exceeding single-wheel traction on soft ground
-3. PID tuning cannot fix the fundamental traction problem — the wheel spins freely at the commanded speed but has no grip
+1. Only the outer wheel drives the turn — the inner wheel is near-stationary and contributes no torque
+2. The heavy nose requires more force to pivot than a single wheel can provide on soft ground
+3. PID controller is working correctly — the outer wheel reaches its commanded speed, but it has no traction, so the speed is achieved by spinning freely
 
 ### Options considered
 
@@ -45,7 +47,8 @@ Implementation in `sunray/motor.cpp` within `setLinearAngularSpeed()`:
 
 ```cpp
 #ifdef TWO_WHEEL_TURN_SPEED_THRESHOLD
-  // inner wheel stall prevention: drive backward when slow
+  // Differential pivot: when inner wheel would be near-stationary, drive it
+  // backward so both wheels contribute turning torque (reduces load on outer wheel)
   if (leftSpeed > 0 && leftSpeed < TWO_WHEEL_TURN_SPEED_THRESHOLD && 
       fabs(rightSpeed) > TWO_WHEEL_TURN_SPEED_THRESHOLD) {
     leftSpeed = -fabs(rightSpeed) * TWO_WHEEL_TURN_INNER_FACTOR;
@@ -60,13 +63,13 @@ Implementation in `sunray/motor.cpp` within `setLinearAngularSpeed()`:
 
 Config defines:
 ```cpp
-#define TWO_WHEEL_TURN_SPEED_THRESHOLD  0.12  // m/s — below this, inner wheel stalls
+#define TWO_WHEEL_TURN_SPEED_THRESHOLD  0.12  // m/s — below this, inner wheel is idle
 #define TWO_WHEEL_TURN_INNER_FACTOR     0.3   // backward speed as fraction of outer
 ```
 
 ### Guard conditions
 
-- Only activates when inner wheel speed is **positive but below threshold** (not during reverse or stop)
+- Only activates when inner wheel speed is **positive but below threshold** — i.e. it would be near-stationary during a turn
 - Excluded during **docking/undocking** (precise positioning needed)
 - Guarded by `#ifdef` so it can be disabled per-mower via config
 
