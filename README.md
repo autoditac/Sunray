@@ -12,6 +12,7 @@ Alfred mowers as **Docker/Podman containers** on a Raspberry Pi 4B.
 | **Deployment** | `start_sunray.sh` + native build on device | Multi-stage Docker image, deployed as Podman Quadlet ([ADR-002](doc/adr/ADR-002-Docker-Containerization.md)) |
 | **Main loop** | Forks shell commands (`fork()`/`exec()`) every loop iteration — pins CPU at 100%, drops control loop to 1 Hz | Shell calls removed — loop runs at 50 Hz, ~5% CPU ([ADR-006](doc/adr/ADR-006-Process-Fork-Removal.md)) |
 | **Control interface** | Sunray Android/iOS app (TCP socket) | CaSSAndRA + Alfred Dashboard (HTTP). Sunray app is **not supported**. |
+| **Bluetooth** | BLE enabled for Sunray app pairing and ESP32 bridge | Disabled — bluez removed from OS, BLE/ESP32 code paths unused ([ADR-009](doc/adr/ADR-009-Base-OS-Cleanup.md)) |
 | **MCU firmware** | Compiled on-device via Arduino IDE | Cross-compiled on x86_64 workstation, flashed via OpenOCD/SWD |
 | **Upstream sync** | — | GitHub fork, `main` rebased on upstream `master` ([ADR-001](doc/adr/ADR-001-Standalone-Fork-Strategy.md)) |
 
