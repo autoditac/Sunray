@@ -14,7 +14,12 @@ bool LinuxConsole::begin(){
     printf("LinuxConsole::begin\n");
     printf("opening TTY...\n");
     keyboard = 0;
-    //keyboard = open("/dev/tty",O_RDONLY|O_NONBLOCK);    
+    // Disable console input when stdin is not a real terminal (e.g. /dev/null in containers).
+    // select() on /dev/null always reports readable (EOF), causing a tight spin loop in processConsole().
+    if (!isatty(keyboard)) {
+        printf("TTY: stdin is not a terminal, disabling console input\n");
+        keyboard = -1;
+    }
     printf("TTY=%d\n", keyboard);    
     return true;
 }
@@ -27,8 +32,7 @@ void LinuxConsole::end(){
 }
 
 int LinuxConsole::available(){
-    //return 0;     
-    //if (keyboard <= 0) return 0;
+    if (keyboard < 0) return 0;
     struct timeval timeout;
     fd_set readfd;
     timeout.tv_sec = 0;
@@ -37,7 +41,6 @@ int LinuxConsole::available(){
     FD_SET(keyboard, &readfd);
     int ret = select(keyboard+1, &readfd, NULL, NULL, &timeout);
     return (ret > 0);    
-    //return (FD_ISSET(keyboard, &readfd));
 }
 
 int LinuxConsole::peek(){
@@ -48,11 +51,10 @@ int LinuxConsole::peek(){
 }
 
 int LinuxConsole::read(){
-    //return 0;
-    //return getchar();          
-    //if (keyboard <= 0) return 0;
+    if (keyboard < 0) return -1;
     char ch = '\0';
-    ::read(keyboard, &ch, 1);
+    int n = ::read(keyboard, &ch, 1);
+    if (n <= 0) return -1;  // EOF or error
     return ch;
 }
 
