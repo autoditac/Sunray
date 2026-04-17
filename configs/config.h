@@ -156,8 +156,9 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 
 // two-wheel turn: when the inner wheel would be commanded very slowly forward during a turn,
 // drive it backward instead to prevent stalling on uneven terrain (useful for heavy-front-chassis like Alfred)
-#define TWO_WHEEL_TURN_SPEED_THRESHOLD  0.12   // inner wheel forward speed (m/s) below which two-wheel turn activates
+#define TWO_WHEEL_TURN_SPEED_THRESHOLD  0.02   // inner wheel forward speed (m/s) below which two-wheel turn activates (must be << setSpeed)
 #define TWO_WHEEL_TURN_INNER_FACTOR     0.3    // inner wheel backward speed as fraction of outer wheel speed
+#define TWO_WHEEL_TURN_MIN_ANGULAR      0.2    // minimum angular speed (rad/s, ~11°/s) to activate — prevents triggering on small Stanley corrections
 
 //#define USE_LINEAR_SPEED_RAMP  true      // use a speed ramp for the linear speed
 #define USE_LINEAR_SPEED_RAMP  false      // do not use a speed ramp 
