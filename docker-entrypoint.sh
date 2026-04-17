@@ -8,6 +8,11 @@ echo "=== Sunray Docker Entrypoint ==="
 echo "Date: $(date)"
 echo "Hostname: $(hostname)"
 
+# Set UART low_latency flag to reduce serial response time (1 tick = 4ms at HZ=250)
+if [ -e /dev/ttyS0 ]; then
+  /opt/sunray/serial_lowlatency /dev/ttyS0 || echo "WARN: could not set ttyS0 low_latency"
+fi
+
 # Forward SIGTERM to the sunray process for graceful shutdown
 trap 'kill -TERM "$SUNRAY_PID" 2>/dev/null; wait "$SUNRAY_PID"' SIGTERM SIGINT
 

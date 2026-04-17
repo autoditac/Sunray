@@ -54,11 +54,20 @@ int thread_set_name(pthread_t t, const char *name){
 int thread_set_priority(const int pri){
     struct sched_param sched ;
     memset (&sched, 0, sizeof(sched)) ;
-    if (pri > sched_get_priority_max(SCHED_OTHER)) {
-        sched.sched_priority = sched_get_priority_max(SCHED_OTHER);
-    } else {
-        sched.sched_priority = pri ;
+    if (pri > 0) {
+        // Use SCHED_FIFO for real-time priority (requires CAP_SYS_NICE)
+        int max_fifo = sched_get_priority_max(SCHED_FIFO);
+        sched.sched_priority = (pri > max_fifo) ? max_fifo : pri;
+        int ret = sched_setscheduler(0, SCHED_FIFO, &sched);
+        if (ret != 0) {
+            printf("WARN: SCHED_FIFO priority %d failed (errno=%d), falling back to SCHED_OTHER\n",
+                   sched.sched_priority, errno);
+            sched.sched_priority = 0;
+            return sched_setscheduler(0, SCHED_OTHER, &sched);
+        }
+        return ret;
     }
+    sched.sched_priority = 0;
     return sched_setscheduler(0, SCHED_OTHER, &sched) ;
 }
 

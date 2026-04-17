@@ -19,6 +19,9 @@
 
 #include "Arduino.h"
 #include <sys/time.h>
+#include <sys/mman.h>
+#include <sched.h>
+#include <errno.h>
 //#include "idemonitor.h"
 
 unsigned long startMillis = 0;
@@ -117,6 +120,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))){
     startMillis = 1000 * tv.tv_sec + tv.tv_usec/1000;
     
     thread_set_priority(65);
+    // Lock all current and future pages to prevent page fault latency spikes
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        printf("WARN: mlockall failed (errno=%d) - page faults may cause latency spikes\n", errno);
+    }
     _keep_sketch_running = 1;
     _loop_is_running = 0;
     //console_attach_signal_handlers();
@@ -129,7 +136,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))){
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
         pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
         pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-        //pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+        pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+        struct sched_param sp;
+        sp.sched_priority = sched_get_priority_max(SCHED_FIFO) - 5;
+        pthread_attr_setschedparam(&attr, &sp);
     }
     if(pthread_create(&_loop_thread, attrp, _loop_thread_task, NULL) == 0){
         if (attrp != NULL) pthread_attr_destroy(attrp);
