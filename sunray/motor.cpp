@@ -423,6 +423,75 @@ void Motor::run() {
     if (motorRightTicksZero > 2) motorRightRpmCurr = 0;
   } else motorRightTicksZero = 0;
 
+  // --- one-wheel turn detection ---
+  // Detect when one wheel is commanded to turn but the other is near zero,
+  // or when one wheel is commanded but not actually moving (stalled).
+  // Uses low-pass filtered RPM to avoid false triggers from encoder noise.
+  // Rate-limited to once per second to avoid log spam.
+  #ifdef MIN_WHEEL_SPEED
+  {
+    static unsigned long lastOneWheelLogTime = 0;
+    if (millis() > lastOneWheelLogTime + 1000) {
+      float absSetL = fabs(motorLeftRpmSet);
+      float absSetR = fabs(motorRightRpmSet);
+      float absCurL = fabs(motorLeftRpmCurrLP);
+      float absCurR = fabs(motorRightRpmCurrLP);
+      float rpmThreshold = 3.0; // RPM below this = effectively stopped
+      float setThreshold = 5.0; // only flag if commanded RPM is above this
+      bool detected = false;
+      // case 1: both wheels commanded, but one is stalled
+      if (absSetL > setThreshold && absSetR > setThreshold) {
+        if (absCurL < rpmThreshold && absCurR > setThreshold) {
+          CONSOLE.print("ONE-WHEEL: L stalled  setL=");
+          CONSOLE.print(motorLeftRpmSet, 1);
+          CONSOLE.print(" curL=");
+          CONSOLE.print(motorLeftRpmCurrLP, 1);
+          CONSOLE.print(" setR=");
+          CONSOLE.print(motorRightRpmSet, 1);
+          CONSOLE.print(" curR=");
+          CONSOLE.println(motorRightRpmCurrLP, 1);
+          detected = true;
+        }
+        if (absCurR < rpmThreshold && absCurL > setThreshold) {
+          CONSOLE.print("ONE-WHEEL: R stalled  setL=");
+          CONSOLE.print(motorLeftRpmSet, 1);
+          CONSOLE.print(" curL=");
+          CONSOLE.print(motorLeftRpmCurrLP, 1);
+          CONSOLE.print(" setR=");
+          CONSOLE.print(motorRightRpmSet, 1);
+          CONSOLE.print(" curR=");
+          CONSOLE.println(motorRightRpmCurrLP, 1);
+          detected = true;
+        }
+      }
+      // case 2: only one wheel commanded (set RPM near zero for one side)
+      if (absSetL < rpmThreshold && absSetR > setThreshold) {
+        CONSOLE.print("ONE-WHEEL: L cmd=0  setL=");
+        CONSOLE.print(motorLeftRpmSet, 1);
+        CONSOLE.print(" setR=");
+        CONSOLE.print(motorRightRpmSet, 1);
+        CONSOLE.print(" lin=");
+        CONSOLE.print(linearSpeedSet, 3);
+        CONSOLE.print(" ang=");
+        CONSOLE.println(angularSpeedSet, 3);
+        detected = true;
+      }
+      if (absSetR < rpmThreshold && absSetL > setThreshold) {
+        CONSOLE.print("ONE-WHEEL: R cmd=0  setL=");
+        CONSOLE.print(motorLeftRpmSet, 1);
+        CONSOLE.print(" setR=");
+        CONSOLE.print(motorRightRpmSet, 1);
+        CONSOLE.print(" lin=");
+        CONSOLE.print(linearSpeedSet, 3);
+        CONSOLE.print(" ang=");
+        CONSOLE.println(angularSpeedSet, 3);
+        detected = true;
+      }
+      if (detected) lastOneWheelLogTime = millis();
+    }
+  }
+  #endif
+
   // speed controller
   control();    
   motorLeftRpmLast = motorLeftRpmCurr;
