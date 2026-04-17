@@ -10,7 +10,7 @@ Alfred mowers as **Docker/Podman containers** on a Raspberry Pi 4B.
 | **Turning** | Single-wheel turns — one wheel spins freely, lacks traction to pivot the heavy nose, digs into soft ground | Both wheels drive in opposite directions for on-the-spot turns ([ADR-004](doc/adr/ADR-004-Two-Wheel-Turn-Fix.md)) |
 | **SBC** | BananaPi M1 — unstable WiFi, outdated Debian | Raspberry Pi 4B — stable WiFi, current Debian ([ADR-003](doc/adr/ADR-003-Raspberry-Pi-4B.md)) |
 | **Deployment** | `start_sunray.sh` + native build on device | Multi-stage Docker image, deployed as Podman Quadlet ([ADR-002](doc/adr/ADR-002-Docker-Containerization.md)) |
-| **Main loop** | Forks shell commands in the control loop (1 Hz) | Shell calls removed — loop runs at 50 Hz ([ADR-006](doc/adr/ADR-006-Process-Fork-Removal.md)) |
+| **Main loop** | Forks shell commands (`fork()`/`exec()`) every loop iteration — pins CPU at 100%, drops control loop to 1 Hz | Shell calls removed — loop runs at 50 Hz, ~5% CPU ([ADR-006](doc/adr/ADR-006-Process-Fork-Removal.md)) |
 | **Control interface** | Sunray Android/iOS app (TCP socket) | CaSSAndRA + Alfred Dashboard (HTTP). Sunray app is **not supported**. |
 | **MCU firmware** | Compiled on-device via Arduino IDE | Cross-compiled on x86_64 workstation, flashed via OpenOCD/SWD |
 | **Upstream sync** | — | GitHub fork, `main` rebased on upstream `master` ([ADR-001](doc/adr/ADR-001-Standalone-Fork-Strategy.md)) |
