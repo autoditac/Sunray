@@ -1176,15 +1176,19 @@ void run(){
   loopTimeMean = 0.99 * loopTimeMean + 0.01 * loopTimeNow; 
   loopTime = millis();
 
-  #ifdef __linux__    
-    if (psOutput == ""){
-      if(loopTimeMax > 500){
-        Process p;
-        p.runShellCommand("ps -eo pcpu,pid,user,args | sort -k 1 -r | head -3");
-        psOutput = p.readString();    
-      }
-    }    
-  #endif
+  // NOTE: Process::runShellCommand forks a shell synchronously, blocking the main
+  // loop for the duration of the command. On Linux/container this was the root cause
+  // of the 1Hz loop: the ps command itself takes hundreds of ms, creating a feedback
+  // loop (slow loop triggers ps, ps makes loop slower). Disabled entirely.
+  // #ifdef __linux__    
+  //   if (psOutput == ""){
+  //     if(loopTimeMax > 500){
+  //       Process p;
+  //       p.runShellCommand("ps -eo pcpu,pid,user,args | sort -k 1 -r | head -3");
+  //       psOutput = p.readString();    
+  //     }
+  //   }    
+  // #endif
 
   if(millis() > loopTimeTimer + 10000){
     if(loopTimeMax > 500){

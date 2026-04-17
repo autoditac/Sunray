@@ -638,18 +638,17 @@ void SerialBatteryDriver::run(){
 
 void SerialBatteryDriver::updateBatteryTemperature(){
   #ifdef __linux__
-    //unsigned long startTime = millis();
-    String s;        
-    while (batteryTempProcess.available()) s+= (char)batteryTempProcess.read();
-    if (s.length() > 0) {
-      batteryTemp = s.toFloat() / 1000.0;    
-      //CONSOLE.print("updateBatteryTemperature batteryTemp=");
-      //CONSOLE.println(batteryTemp);
+    // Read battery/board temperature directly from sysfs (thermal_zone1).
+    // The old approach used Process::runShellCommand("cat ...") which forked a shell,
+    // blocking the main loop for the duration of the command.
+    FILE *f = fopen("/sys/class/thermal/thermal_zone1/temp", "r");
+    if (f) {
+      char buf[16];
+      if (fgets(buf, sizeof(buf), f)) {
+        batteryTemp = atof(buf) / 1000.0;
+      }
+      fclose(f);
     }
-    batteryTempProcess.runShellCommand("cat /sys/class/thermal/thermal_zone1/temp");  
-    //unsigned long duration = millis() - startTime;        
-    //CONSOLE.print("updateBatteryTemperature duration: ");
-    //CONSOLE.println(duration);        
   #endif
 }
 
