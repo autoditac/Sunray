@@ -60,3 +60,8 @@ Adopt the **three-layer architecture** from devops-awesome, scaled to Sunray's s
 - The `docs` agent is explicitly read-only for source code — prevents accidental code changes during documentation
 - Adding a new workflow (e.g., unit testing): create a skill, optionally an agent, add to orchestrator
 - Maintenance: when project structure changes, update the relevant instruction/skill files
+
+## References
+
+- [`46fa21f`](https://github.com/autoditac/Sunray/commit/46fa21f) — Copilot agent, skill, and instruction configs
+- [#1](https://github.com/autoditac/Sunray/pull/1) — PR: docs/copilot-configs-and-project-docs

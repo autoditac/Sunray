@@ -35,3 +35,8 @@ upstream → https://github.com/Ardumower/Sunray.git         (original)
 - GitHub fork network enables contributing back to upstream via PRs directly
 - Common conflict areas: `sunray/motor.cpp` (two-wheel-turn patch), `linux/config_alfred.h` (custom defines)
 - `main` branch carries our customizations on top of upstream `master`
+
+## References
+
+- [`f9ea46a`](https://github.com/autoditac/Sunray/commit/f9ea46a) — Initial fork: Alfred customizations, two-wheel-turn, Docker build, per-mower configs
+- [`59d4dc4`](https://github.com/autoditac/Sunray/commit/59d4dc4) — ADR-001 through ADR-005 added

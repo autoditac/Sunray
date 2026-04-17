@@ -79,3 +79,10 @@ Config defines:
 - Path tracking controller (Stanley) adapts naturally since actual heading converges faster
 - Must be tested on both mowers — terrain characteristics differ
 - Values (0.12 m/s threshold, 30% factor) may need per-mower tuning in future
+
+## References
+
+- [`f9ea46a`](https://github.com/autoditac/Sunray/commit/f9ea46a) — Initial two-wheel-turn implementation
+- [`5bf0529`](https://github.com/autoditac/Sunray/commit/5bf0529) — Replace with MIN_WHEEL_SPEED guarantee
+- [`510592e`](https://github.com/autoditac/Sunray/commit/510592e) — Expand to cover rotation mode + debug logging
+- [`fd16779`](https://github.com/autoditac/Sunray/commit/fd16779) — Add one-wheel turn detection diagnostics

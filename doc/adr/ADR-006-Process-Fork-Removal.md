@@ -69,3 +69,9 @@ The `ps` monitoring in `robot.cpp` created a **vicious feedback loop**: the loop
 | `sunray/robot.cpp` | Commented out `Process p; p.runShellCommand("ps ...")` block |
 | `sunray/src/driver/SerialRobotDriver.cpp` | Replaced `updateCpuTemperature()` and `updateBatteryTemperature()` with direct sysfs, disabled `updateWifiConnectionState()` |
 | `sunray/src/driver/SerialRobotDriver.h` | Removed `Process cpuTempProcess`, `wifiStatusProcess`, `batteryTempProcess` members |
+
+## References
+
+- [`0c3955a`](https://github.com/autoditac/Sunray/commit/0c3955a) — Prevent 100% CPU spin when stdin is /dev/null (container)
+- [`21de4d6`](https://github.com/autoditac/Sunray/commit/21de4d6) — Replace Process forks with direct sysfs reads, disable WiFi monitoring
+- [`2e93a54`](https://github.com/autoditac/Sunray/commit/2e93a54) — Remove Process::runShellCommand from main loop

@@ -50,3 +50,8 @@ The upstream `swd-pi.ocd` is configured for BananaPi GPIO numbers. For RPi 4B, u
 - IO board I2C works identically (`/dev/i2c-1`)
 - `SERIAL_ROBOT_PATH` must be `/dev/ttyS0` instead of upstream default `/dev/ttyS1` — changed in `configs/config.h`
 - MCU flashing via OpenOCD requires `openocd/rpi4.cfg` instead of `swd-pi.ocd` (different GPIO driver and pin numbers)
+
+## References
+
+- [`cb4025b`](https://github.com/autoditac/Sunray/commit/cb4025b) — ADR-003: RPi 4B replacing BananaPi
+- [`baa1774`](https://github.com/autoditac/Sunray/commit/baa1774) — Fix SERIAL_ROBOT_PATH, document GPIO/UART differences
