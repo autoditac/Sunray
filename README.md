@@ -7,7 +7,7 @@ Alfred mowers as **Docker/Podman containers** on a Raspberry Pi 4B.
 
 | Area | Upstream | This fork |
 |---|---|---|
-| **Turning** | Three-point turns — mower digs into soft ground | Two-wheel differential turns on the spot ([ADR-004](doc/adr/ADR-004-Two-Wheel-Turn-Fix.md)) |
+| **Turning** | Single-wheel turns — one wheel spins freely, lacks traction to pivot the heavy nose, digs into soft ground | Both wheels drive in opposite directions for on-the-spot turns ([ADR-004](doc/adr/ADR-004-Two-Wheel-Turn-Fix.md)) |
 | **SBC** | BananaPi M1 — unstable WiFi, outdated Debian | Raspberry Pi 4B — stable WiFi, current Debian ([ADR-003](doc/adr/ADR-003-Raspberry-Pi-4B.md)) |
 | **Deployment** | `start_sunray.sh` + native build on device | Multi-stage Docker image, deployed as Podman Quadlet ([ADR-002](doc/adr/ADR-002-Docker-Containerization.md)) |
 | **Main loop** | Forks shell commands in the control loop (1 Hz) | Shell calls removed — loop runs at 50 Hz ([ADR-006](doc/adr/ADR-006-Process-Fork-Removal.md)) |
