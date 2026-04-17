@@ -10,7 +10,7 @@
 
 ## Context
 
-The Sunray firmware is developed at [Ardumower/Sunray](https://github.com/Ardumower/Sunray) and targets multiple hardware platforms (Ardumower, Alfred, Owlet). We run two Alfred mowers (robin, batman) with custom patches (two-wheel-turn, disabled features) and need to maintain these customizations while staying close to upstream.
+The Sunray firmware is developed at [Ardumower/Sunray](https://github.com/Ardumower/Sunray) and targets multiple hardware platforms (Ardumower, Alfred, Owlet). We run two Alfred mowers with custom patches (two-wheel-turn, disabled features) and need to maintain these customizations while staying close to upstream.
 
 ### Options considered
 

@@ -59,7 +59,7 @@ rpd-wallpaper-trixie rpd-plym-splash rpi-chromium-mods gui-updater
 | `systemd-timesyncd` | NTP time sync (critical for GPS) |
 | `systemd-udevd` | Device management |
 | `NetworkManager` + `wpa_supplicant` | WiFi connectivity |
-| `avahi-daemon` | mDNS (`batman.local` resolution) |
+| `avahi-daemon` | mDNS (`.local` hostname resolution) |
 | `cron` | Scheduled tasks |
 | `dbus-daemon` | System message bus |
 | `agetty` | Console login (emergency access) |
@@ -75,7 +75,7 @@ systemctl disable motion wayvnc wayvnc-control bluetooth \
 loginctl disable-linger pi  # stop user session services
 ```
 
-Avahi was initially removed but reinstalled per requirement for `batman.local` mDNS resolution.
+Avahi was initially removed but reinstalled per requirement for `.local` mDNS resolution.
 
 ## Consequences
 

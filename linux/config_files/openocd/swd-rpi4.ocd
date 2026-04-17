@@ -1,0 +1,26 @@
+# OpenOCD script for using Raspberry Pi 4B as SWD Programmer for STM32
+# Uses linuxgpiod (modern character device interface, required on kernel 6.x+)
+#
+# Physical wiring (RPi header → Alfred J1 bottom connector):
+#   P18  BCM GPIO24  →  J1-2  SWDIO
+#   P22  BCM GPIO25  →  J1-3  SWCLK
+#   P16  BCM GPIO23  →  J1-1  SRST (main MCU)
+#   GND              →  J1-4  GND
+#
+# For perimeter MCU, use SRST on GPIO 20 (P24) instead of GPIO 23 (P16).
+
+adapter driver linuxgpiod
+adapter gpio swdio 24 -chip 0
+adapter gpio swclk 25 -chip 0
+adapter gpio srst 23 -chip 0
+
+transport select swd
+
+reset_config srst_only
+reset_config srst_nogate
+reset_config connect_assert_srst
+
+source [find target/stm32f1x.cfg]
+
+adapter srst delay 100
+adapter srst pulse_width 100
