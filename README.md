@@ -18,7 +18,7 @@ Alfred mowers as **Docker/Podman containers** on a Raspberry Pi 4B.
 | **Buzzer** | Enabled | Disabled — beeps not wanted ([`f9ea46a`](https://github.com/autoditac/Sunray/commit/f9ea46a)) |
 | **Container updates** | Manual | Safe auto-update via `alfred-safe-update.timer` — checks dock state and CaSSAndRA schedule before running `podman auto-update`. `:latest` tag only updates on release, not on every push ([Ansible role](https://github.com/autoditac/alfred-ansible)) |
 | **MCU firmware** | Compiled on-device via Arduino IDE | Cross-compiled on x86_64 workstation, flashed via OpenOCD/SWD |
-| **Upstream sync** | — | GitHub fork, `main` rebased on upstream `master` ([ADR-001](doc/adr/ADR-001-Standalone-Fork-Strategy.md)) |
+| **Upstream sync** | — | GitHub fork, `main` rebased on upstream `master` ([ADR-001](doc/adr/ADR-001-Standalone-Fork-Strategy.md)). Last merge: [`e2791e6`](https://github.com/Ardumower/Sunray/commit/e2791e6d1560b7f44d18151480079546f8dd92e3) (2026-03-22) |
 
 ## Building the container image
 
