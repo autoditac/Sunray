@@ -46,7 +46,7 @@
 #include "timetable.h"
 
 
-#define VER "Sunray,1.0.331-autoditac"
+#define VER "Sunray,1.0.331-autoditac.1"
 
 // common types
 #include "types.h"

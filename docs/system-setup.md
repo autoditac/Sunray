@@ -148,6 +148,64 @@ sudo journalctl -u sunray --no-pager -n 100 | grep "MCU FIRMWARE"
 # MCU FIRMWARE: RM18,1.1.16
 ```
 
+## Container Updates
+
+All three services (sunray, cassandra, alfred-dashboard) are configured with
+`AutoUpdate=registry` in their Quadlet unit files.  Podman's built-in
+auto-update mechanism checks the container registry for newer images and
+restarts services that have updates.
+
+### How it works
+
+1. Each `.container` Quadlet file declares `AutoUpdate=registry`.
+2. `podman auto-update` compares the local image digest against the registry
+   (`ghcr.io/autoditac/<image>:latest`).
+3. If a newer digest is found, Podman pulls the image and restarts the
+   systemd service.
+
+### Automatic daily updates
+
+Enable the systemd timer (runs daily with up to 15 min random delay):
+
+```bash
+sudo systemctl enable --now podman-auto-update.timer
+```
+
+Verify the timer is active:
+
+```bash
+sudo systemctl list-timers podman-auto-update.timer
+```
+
+### Manual update check
+
+Dry-run (shows which containers have pending updates without applying):
+
+```bash
+sudo podman auto-update --dry-run
+```
+
+Apply updates immediately:
+
+```bash
+sudo podman auto-update
+```
+
+### Manual deployment (without registry)
+
+When building images locally (not pushed to a registry), transfer them
+directly to the mower:
+
+```bash
+# From workstation:
+docker save ghcr.io/autoditac/sunray:latest | ssh mower sudo podman load
+ssh mower "sudo systemctl restart sunray"
+```
+
+> **Note**: The auto-update timer runs daily. Once CI/CD pushes images to
+> `ghcr.io/autoditac/`, containers will update automatically. Until then,
+> use the manual deployment method below after local builds.
+
 ## Package Dependencies (on mower)
 
 ```bash
