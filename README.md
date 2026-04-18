@@ -16,7 +16,7 @@ Alfred mowers as **Docker/Podman containers** on a Raspberry Pi 4B.
 | **WiFi management** | Firmware polls `wpa_cli` every 7 s in the control loop | Removed from firmware — OS owns WiFi via NetworkManager, kernel LED trigger ([ADR-010](doc/adr/ADR-010-WiFi-Management-OS-Level.md)) |
 | **Lift sensor** | Enabled — stops mower and triggers obstacle avoidance when tilted | Disabled — causes frequent false triggers on uneven terrain ([`f9ea46a`](https://github.com/autoditac/Sunray/commit/f9ea46a)) |
 | **Buzzer** | Enabled | Disabled — beeps not wanted ([`f9ea46a`](https://github.com/autoditac/Sunray/commit/f9ea46a)) |
-| **Container updates** | Manual | Daily auto-update via `podman-auto-update.timer` — pulls newer images from registry and restarts services ([Ansible role](https://github.com/autoditac/alfred-ansible)) |
+| **Container updates** | Manual | Safe auto-update via `alfred-safe-update.timer` — checks dock state and CaSSAndRA schedule before running `podman auto-update`. `:latest` tag only updates on release, not on every push ([Ansible role](https://github.com/autoditac/alfred-ansible)) |
 | **MCU firmware** | Compiled on-device via Arduino IDE | Cross-compiled on x86_64 workstation, flashed via OpenOCD/SWD |
 | **Upstream sync** | — | GitHub fork, `main` rebased on upstream `master` ([ADR-001](doc/adr/ADR-001-Standalone-Fork-Strategy.md)) |
 

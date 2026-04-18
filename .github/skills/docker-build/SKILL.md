@@ -35,10 +35,11 @@ docker buildx build --platform linux/arm64 -t sunray --load .
 ## GitHub Actions CI
 
 The workflow at `.github/workflows/build.yml`:
-- Triggers on push to `main`
+- Triggers on push to `main` and on tag pushes
 - Builds a single image: `sunray`
 - Uses QEMU for arm64 emulation
-- Pushes to `ghcr.io/<owner>/sunray:latest` and `:sha`
+- Push to `main`: tags `:sha` only
+- Release tag push: tags `:sha`, `:version`, and `:latest`
 - Uses GitHub Actions cache for layer caching
 
 ## Deploy to mower (Podman + Quadlet)
@@ -66,10 +67,14 @@ sudo systemctl enable sunray  # auto-start on boot
 ### Update workflow
 
 ```bash
-# Automatic: podman checks ghcr.io for newer :latest and restarts
-ssh robin "sudo podman auto-update"
+# Automatic: alfred-safe-update.timer runs at 03:00 daily
+# Checks dock state + CaSSAndRA schedule before running podman auto-update
+sudo systemctl status alfred-safe-update.timer
 
-# Manual:
+# Manual (bypasses safety checks):
+ssh <mower> "sudo podman auto-update"
+
+# Or pull + restart directly:
 ssh <mower> "sudo podman pull ghcr.io/<user>/sunray:latest && sudo systemctl restart sunray"
 ```
 

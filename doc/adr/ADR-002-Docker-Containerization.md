@@ -59,6 +59,8 @@ Podman is in the Debian Bookworm repos (`apt install podman`). Quadlet generates
 - First Docker build takes ~10 min due to QEMU; subsequent builds use layer cache
 - Mower runtime uses Podman (daemonless) — saves ~30-50MB RAM vs Docker daemon
 - Updates via `podman auto-update` or `systemctl restart sunray` after manual pull
+- Safe auto-update: `alfred-safe-update.timer` wraps `podman auto-update` with dock-state and schedule checks (added 2026-04)
+- CI tags `:latest` only on release tags — development pushes get `:sha` only (added 2026-04)
 - Rollback: `podman image list` → run previous tag, or re-enable native systemd service
 - The original `start_sunray.sh` remains untouched for non-Docker use
 - `sunray_manual.pdf` and other large files excluded via `.dockerignore`

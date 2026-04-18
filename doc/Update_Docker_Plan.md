@@ -1,5 +1,10 @@
 # Update & Docker Deployment Plan for Mower-B & Mower-A
 
+> **Historical document** — this was the initial migration plan from April 2026.
+> For current setup, see [docs/system-setup.md](../docs/system-setup.md) and
+> [ADR-002](adr/ADR-002-Docker-Containerization.md).  CI tagging and
+> auto-update behaviour have since changed.
+
 ## Goals
 1. Update both mowers to latest Sunray firmware (1.0.331+)
 2. Retain custom config per mower

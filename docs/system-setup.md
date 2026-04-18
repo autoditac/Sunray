@@ -163,18 +163,40 @@ restarts services that have updates.
 3. If a newer digest is found, Podman pulls the image and restarts the
    systemd service.
 
-### Automatic daily updates
+### CI tagging strategy
 
-Enable the systemd timer (runs daily with up to 15 min random delay):
+- **Push to `main`** — CI builds an image tagged with `:sha` only.
+- **Release tag** (e.g. `1.0.331-autoditac.1`) — CI tags `:sha`, `:version`,
+  and `:latest`.
+
+This means `:latest` on the registry only advances when a release is created.
+Regular development pushes build images but do not trigger auto-updates on
+the mower.
+
+### Safe auto-update (`alfred-safe-update`)
+
+The raw `podman-auto-update.timer` is disabled.  Instead,
+`alfred-safe-update.timer` runs daily at 03:00 (+30 min jitter) and performs
+two safety checks before calling `podman auto-update`:
+
+1. **Mower state** — queries the Alfred Dashboard API (`/api/status`).
+   Only proceeds when `operation` is IDLE (0) or CHARGE (2).  Skips when
+   mowing (1) or docking (4).
+2. **CaSSAndRA schedule** — reads `schedulecfg.json`.  Skips if a mowing
+   schedule starts within 30 minutes.
+
+If either check fails, the update is skipped until the next timer run.
+
+Enable the timer (managed by the Ansible role):
 
 ```bash
-sudo systemctl enable --now podman-auto-update.timer
+sudo systemctl enable --now alfred-safe-update.timer
 ```
 
 Verify the timer is active:
 
 ```bash
-sudo systemctl list-timers podman-auto-update.timer
+sudo systemctl list-timers alfred-safe-update.timer
 ```
 
 ### Manual update check
@@ -185,7 +207,7 @@ Dry-run (shows which containers have pending updates without applying):
 sudo podman auto-update --dry-run
 ```
 
-Apply updates immediately:
+Apply updates immediately (bypasses safety checks):
 
 ```bash
 sudo podman auto-update
@@ -201,10 +223,6 @@ directly to the mower:
 docker save ghcr.io/autoditac/sunray:latest | ssh mower sudo podman load
 ssh mower "sudo systemctl restart sunray"
 ```
-
-> **Note**: The auto-update timer runs daily. Once CI/CD pushes images to
-> `ghcr.io/autoditac/`, containers will update automatically. Until then,
-> use the manual deployment method below after local builds.
 
 ## Package Dependencies (on mower)
 
