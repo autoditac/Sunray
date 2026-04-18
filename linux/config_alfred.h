@@ -444,7 +444,9 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // stanley control for path tracking - determines gain how fast to correct for lateral path errors
 #define STANLEY_CONTROL_P_NORMAL  2.0   // 3.0 upstream — reduced for Alfred's nose-heavy chassis (less overshoot)
 #define STANLEY_CONTROL_K_NORMAL  0.5   // 1.0 upstream — reduced for Alfred's nose-heavy chassis (smoother lateral correction)
-
+// Softening constant (m/s) — prevents aggressive corrections at low speeds (upstream #144).
+// Higher values reduce speed sensitivity. Literature suggests 1.0; upstream hardcodes 0.001.
+#define STANLEY_CONTROL_K_SOFT    0.2
 #define STANLEY_CONTROL_P_SLOW    3.0   // 3.0 for path tracking control (angular gain) when docking tracking
 #define STANLEY_CONTROL_K_SLOW    0.1   // 0.1 for path tracking control (lateral gain) when docking tracking
 

@@ -35,6 +35,9 @@ float PID::compute() {
   Ta = ((float)(now - lastControlTime)) / 1000.0;
   //printf("%.3f\n", Ta);
   lastControlTime = now;
+  // Guard against division by zero in Kd/Ta (upstream #161).
+  // Can happen when compute() is called in the same millisecond as reset().
+  if (Ta < 1e-6f) Ta = 1e-6f;
   if (Ta > TaMax) {
     if (millis() > consoleWarnTimeout){
       consoleWarnTimeout = millis() + 1000;

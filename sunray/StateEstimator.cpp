@@ -363,11 +363,22 @@ void StateEstimator::computeRobotState(){
     stateGroundSpeed = 0.9 * stateGroundSpeed + 0.1 * abs(gps.groundSpeed);    
     //CONSOLE.println(stateGroundSpeed);
     float distGPS = sqrt( sq(posN-lastPosN)+sq(posE-lastPosE) );
+    // Time since last processed GPS solution (upstream #172).
+    // When the pathfinder or other code blocks the main loop, the GPS module
+    // accumulates a new position.  The mower legitimately travels during that
+    // time, so a large distGPS is expected — not a GPS jump.
+    unsigned long gpsSolutionDelta = millis() - lastGPSSolutionTime;
+    lastGPSSolutionTime = millis();
     if ((distGPS > 0.3) || (resetLastPos)){
-      if (distGPS > 0.3) {
+      if ((distGPS > 0.3) && (gpsSolutionDelta < 350)) {
         gpsJump = true;
         stats.statGPSJumps++;
         CONSOLE.print("GPS jump: ");
+        CONSOLE.println(distGPS);
+      } else if (distGPS > 0.3) {
+        CONSOLE.print("GPS large delta (");
+        CONSOLE.print(gpsSolutionDelta);
+        CONSOLE.print("ms): ");
         CONSOLE.println(distGPS);
       }
       resetLastPos = false;

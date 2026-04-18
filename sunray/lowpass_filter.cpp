@@ -22,6 +22,9 @@ float LowPassFilter::operator() (float x)
 
     float alpha = Tf/(Tf + dt);
     float y = alpha*y_prev + (1.0f - alpha)*x;
+    // Guard against NaN propagation (upstream #161).
+    // Once y_prev becomes NaN the filter output stays NaN forever.
+    if (isnan(y)) y = x;
     y_prev = y;
     timestamp_prev = timestamp;
     return y;

@@ -247,12 +247,13 @@ void SerialRobotDriver::requestSummary(){
 
 
 // request MCU motor PWM
+// Alfred MCU expects: left,right,mow (upstream #151 fix)
 void SerialRobotDriver::requestMotorPwm(int leftPwm, int rightPwm, int mowPwm){
   String req;
   req += "AT+M,";
-  req += rightPwm;      
+  req += leftPwm;      
   req += ",";
-  req += leftPwm;    
+  req += rightPwm;    
   req += ",";  
   req += mowPwm;
   //if (abs(mowPwm) > 0)
@@ -274,10 +275,11 @@ void SerialRobotDriver::motorResponse(){
     if ((ch == ',') || (idx == cmd.length()-1)){
       int intValue = cmd.substring(lastCommaIdx+1, ch==',' ? idx : idx+1).toInt();
       float floatValue = cmd.substring(lastCommaIdx+1, ch==',' ? idx : idx+1).toFloat();      
+      // Alfred MCU sends: left,right,mow,... (upstream #151 fix)
       if (counter == 1){                            
-        encoderTicksRight = intValue;  // ag
+        encoderTicksLeft = intValue;
       } else if (counter == 2){
-        encoderTicksLeft = intValue;   // ag
+        encoderTicksRight = intValue;
       } else if (counter == 3){
         encoderTicksMow = intValue;
       } else if (counter == 4){

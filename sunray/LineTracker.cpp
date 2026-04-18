@@ -28,7 +28,16 @@ void LineTracker::trackLine(bool runControl){
   bool mow = true;
   if (stateEstimator.stateOp == OP_DOCK) mow = false;
   float angular = 0;      
-  float targetDelta = pointsAngle(stateEstimator.stateX, stateEstimator.stateY, target.x(), target.y());      
+  // Use path segment direction (lastTarget→target) instead of robot→target.
+  // When the robot is very close to the target, robot→target angle becomes
+  // numerically unstable and can swing wildly, causing wrong rotation direction
+  // (upstream #25).  Fall back to robot→target only when lastTarget==target.
+  float segLen = distance(lastTarget.x(), lastTarget.y(), target.x(), target.y());
+  float targetDelta;
+  if (segLen > 0.01f)
+    targetDelta = pointsAngle(lastTarget.x(), lastTarget.y(), target.x(), target.y());
+  else
+    targetDelta = pointsAngle(stateEstimator.stateX, stateEstimator.stateY, target.x(), target.y());
   if (maps.trackReverse) targetDelta = scalePI(targetDelta + PI);  
   targetDelta = scalePIangles(targetDelta, stateEstimator.stateDelta);
   trackerDiffDelta = distancePI(stateEstimator.stateDelta, targetDelta);                         
@@ -164,7 +173,13 @@ void LineTracker::trackLine(bool runControl){
       k = stanleyTrackingSlowK; //STANLEY_CONTROL_K_SLOW;   
       p = stanleyTrackingSlowP; //STANLEY_CONTROL_P_SLOW;          
     }
-    angular =  p * trackerDiffDelta + atan2(k * stateEstimator.lateralError, (0.001 + fabs(motor.linearSpeedSet)));       // correct for path errors           
+    // Stanley cross-track correction with configurable softening (upstream #144).
+    // STANLEY_CONTROL_K_SOFT prevents violent corrections at low speeds by clamping
+    // the effective minimum speed in the denominator.
+    #ifndef STANLEY_CONTROL_K_SOFT
+      #define STANLEY_CONTROL_K_SOFT 0.001  // upstream default (effectively no softening)
+    #endif
+    angular =  p * trackerDiffDelta + atan2(k * stateEstimator.lateralError, (STANLEY_CONTROL_K_SOFT + fabs(motor.linearSpeedSet)));       // correct for path errors           
     /*pidLine.w = 0;              
     pidLine.x = stateEstimator.lateralError;
     pidLine.max_output = PI;
