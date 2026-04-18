@@ -99,6 +99,7 @@ private:
   float lastPosN = 0;
   float lastPosE = 0;
   float lastPosDelta = 0;
+  unsigned long lastGPSSolutionTime = 0;  // upstream #172: track GPS solution age
   bool resetLastPos = true;
   float rollChange = 0;
   float pitchChange = 0;
