@@ -88,6 +88,13 @@ independently — creating asymmetric drag and oscillation until both
 settle. On soft ground, one caster may dig in while the other swivels
 freely, pulling the mower off-line.
 
+The stock caster wheels use **steel ball bearings** that are exposed to
+ground moisture (dew, rain, wet grass). These rust within one season,
+increasing rolling resistance and causing the casters to bind. Replace
+with corrosion-proof bearings — e.g.
+[igus xiros BB-6000-B180-10-GL](https://www.igus.dk/product/xiros_radial_B180_GL_PA_D)
+(xirodur B180 plastic rings, glass balls, size 6000).
+
 ### Sensors designed for random-path
 
 The lift sensor triggers on normal terrain undulation during systematic
