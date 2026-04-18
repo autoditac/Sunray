@@ -442,8 +442,8 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 #define TARGET_ANGLE_TOLERANCE 20
 
 // stanley control for path tracking - determines gain how fast to correct for lateral path errors
-#define STANLEY_CONTROL_P_NORMAL  3.0   // 3.0 for path tracking control (angular gain) when mowing
-#define STANLEY_CONTROL_K_NORMAL  1.0   // 1.0 for path tracking control (lateral gain) when mowing
+#define STANLEY_CONTROL_P_NORMAL  2.0   // 3.0 upstream — reduced for Alfred's nose-heavy chassis (less overshoot)
+#define STANLEY_CONTROL_K_NORMAL  0.5   // 1.0 upstream — reduced for Alfred's nose-heavy chassis (smoother lateral correction)
 
 #define STANLEY_CONTROL_P_SLOW    3.0   // 3.0 for path tracking control (angular gain) when docking tracking
 #define STANLEY_CONTROL_K_SLOW    0.1   // 0.1 for path tracking control (lateral gain) when docking tracking
