@@ -160,6 +160,12 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // heavy-nose chassis like Alfred where one slow wheel can't turn alone.
 #define MIN_WHEEL_SPEED  0.05  // m/s — wheels below this can't move Alfred's nose
 
+// Phase-1 instrumentation for steering-analysis-2026-04: emits a
+// "STEER:" line every 100 ms with commanded vs. actual wheel state,
+// PWM, current, Stanley lateral error, and fused/IMU/encoder yaw
+// rates.  See configs/config.h for details.
+#define STEER_LOG
+
 //#define USE_LINEAR_SPEED_RAMP  true      // use a speed ramp for the linear speed
 #define USE_LINEAR_SPEED_RAMP  false      // do not use a speed ramp 
 
