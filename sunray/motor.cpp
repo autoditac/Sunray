@@ -217,23 +217,39 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
      bool adjusted = false;
      if (fabs(linearSpeedSet) > 0.01f) {
        // Forward/reverse tracking: clamp inner wheel MAGNITUDE to
-       // MIN_WHEEL_SPEED, preserving the sign that was geometrically
-       // requested.  Tight curves produce an inner wheel speed that is
-       // either near-zero positive (e.g. +0.006 m/s) or near-zero negative
-       // (e.g. -0.006 m/s) depending on |ang| vs lin/wheelBase; both fall
-       // inside the motor dead zone and must be lifted out of it.
+       // MIN_WHEEL_SPEED.  The sign must be STABLE — basing it on the raw
+       // inner-wheel speed is unsafe because near-zero rspeed/lspeed
+       // flicker around 0 with PID noise.
        //
-       // A previous attempt (commit 98a24ab, reverted in ba4e4f3) dropped
-       // the sign guard entirely, clobbering legitimately negative inner
-       // speeds (|rspeed| ≈ 9 RPM < MIN) to +MIN — that flipped the wheel
-       // direction once per path-tracker cycle (1 Hz sign oscillation) and
-       // looked like an R-wheel stall.  Preserving the sign avoids that.
+       // Observed failure on batman 2026-04-19 22:06:55: v=-0.1, w≈0.5
+       // (reverse-pivot out of dock) gives rspeed≈-0.003 m/s geometrically.
+       // PID-driven w oscillated 0.495..0.525 each tick, flipping sign of
+       // rspeed every cycle.  The old preserve-sign rule then clamped
+       // rpmRset alternately to -4.7 and +4.7 at ~1 Hz.  The MS4931 driver
+       // can not reverse direction that fast, so the right wheel just
+       // jittered a few mm while the left wheel drove Alfred into a
+       // one-wheel turn.
+       //
+       // Stable rule: when the inner wheel sits well inside the dead zone
+       // (|v_inner| < NEAR_ZERO_EPS), clamp it in the direction of
+       // linearSpeedSet — the overall travel direction is noise-free and
+       // matches the driver intent (move the chassis fwd/rev while the
+       // outer wheel steers).  Outside that band, keep the preserved
+       // geometric sign so legitimately negative inner speeds (|rspeed|
+       // approx 9 RPM < MIN, clearly non-noise) are not clobbered — that
+       // was the bug in commit 98a24ab reverted in ba4e4f3.
+       const float NEAR_ZERO_EPS = 0.015f;  // ~5x observed PID-noise on rspeed
+       const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
        if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
-         lspeed = (lspeed < 0) ? -MIN_WHEEL_SPEED : MIN_WHEEL_SPEED;
+         float sign = (fabs(lspeed) < NEAR_ZERO_EPS) ? linearSign
+                                                     : ((lspeed < 0) ? -1.0f : 1.0f);
+         lspeed = sign * MIN_WHEEL_SPEED;
          adjusted = true;
        }
        if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
-         rspeed = (rspeed < 0) ? -MIN_WHEEL_SPEED : MIN_WHEEL_SPEED;
+         float sign = (fabs(rspeed) < NEAR_ZERO_EPS) ? linearSign
+                                                     : ((rspeed < 0) ? -1.0f : 1.0f);
+         rspeed = sign * MIN_WHEEL_SPEED;
          adjusted = true;
        }
      } else {
