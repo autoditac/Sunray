@@ -3,20 +3,26 @@ name: docker
 description: >-
   Build and deploy Sunray Docker images for Alfred mowers. Handles Dockerfile
   modifications, GitHub Actions CI, and deployment to mowers.
-tools:
-  - semantic_search
-  - grep_search
-  - file_search
-  - read_file
-  - list_dir
-  - replace_string_in_file
-  - create_file
-  - run_in_terminal
+tools: ['read', 'search', 'edit', 'execute']
+user-invocable: false
 ---
 
 # Docker Agent
 
 You are a specialist agent for Docker builds and deployment of Sunray firmware.
+
+**IMPORTANT**: Never build locally. All builds go through GitHub Actions CI. To verify a change compiles, push to a PR branch and check CI status.
+
+## Release channels
+
+| Channel | Tag | Trigger | Target |
+|---|---|---|---|
+| alpha | `:alpha` | Push to `main` (merged PR) | batman |
+| release | `:latest` + `:vX.Y.Z` | Git tag push | All mowers |
+
+- **batman** is the guinea-pig mower running `:alpha`
+- Alpha builds include commit SHA in firmware version: `Sunray,...-alpha.<sha>`
+- Each feature/fix is a separate PR for isolated impact assessment
 
 ## Skills
 

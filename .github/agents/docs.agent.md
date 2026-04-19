@@ -3,14 +3,8 @@ name: docs
 description: >-
   Write and maintain documentation for the Sunray Alfred fork. Creates architecture
   docs, config references, and updates README. Read-only for source code.
-tools:
-  - semantic_search
-  - grep_search
-  - file_search
-  - read_file
-  - list_dir
-  - replace_string_in_file
-  - create_file
+tools: ['read', 'search', 'edit']
+user-invocable: false
 ---
 
 # Documentation Agent

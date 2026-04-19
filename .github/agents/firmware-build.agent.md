@@ -3,16 +3,8 @@ name: firmware-build
 description: >-
   Build, configure, and modify Sunray firmware. Handles C++ source editing,
   config management, CMake builds, and compilation troubleshooting.
-tools:
-  - semantic_search
-  - grep_search
-  - file_search
-  - read_file
-  - list_dir
-  - replace_string_in_file
-  - create_file
-  - run_in_terminal
-  - get_errors
+tools: ['read', 'search', 'edit', 'execute', 'get_errors']
+user-invocable: false
 ---
 
 # Firmware Build Agent
