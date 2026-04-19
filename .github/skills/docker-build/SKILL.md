@@ -38,9 +38,25 @@ The workflow at `.github/workflows/build.yml`:
 - Triggers on push to `main` and on tag pushes
 - Builds a single image: `sunray`
 - Uses QEMU for arm64 emulation
-- Push to `main`: tags `:sha` only
-- Release tag push: tags `:sha`, `:version`, and `:latest`
+- Push to `main` (merged PR): tags `:sha`, `:alpha`
+  - Passes `FIRMWARE_SHA=<short-sha>` build arg → firmware version becomes `Sunray,...-alpha.<sha>`
+- Release tag push: tags `:sha`, `:version`, `:latest` (no FIRMWARE_SHA → clean version)
 - Uses GitHub Actions cache for layer caching
+
+### Release channels
+
+| Channel | Image tag | Trigger | Target mowers |
+|---|---|---|---|
+| alpha | `:alpha` | Every push to `main` | batman (guinea pig) |
+| release | `:latest` + `:vX.Y.Z` | Git tag push | All mowers |
+
+### Development workflow
+
+1. Each feature/fix gets its **own PR branch**
+2. PR merge to `main` triggers CI → `:alpha` tag → batman auto-updates
+3. Test on batman, verify logs (`ssh batman "sudo journalctl -u sunray.service -f"`)
+4. Once validated, create a git tag to promote to `:latest` for all mowers
+5. **Never build locally** — always use CI. No native builds on workstation or mower.
 
 ## Deploy to mower (Podman + Quadlet)
 
@@ -67,6 +83,9 @@ sudo systemctl enable sunray  # auto-start on boot
 ### Update workflow
 
 ```bash
+# batman (alpha channel): auto-updates via podman auto-update on :alpha tag
+# Other mowers: auto-update via podman auto-update on :latest tag
+
 # Automatic: alfred-safe-update.timer runs at 03:00 daily
 # Checks dock state + CaSSAndRA schedule before running podman auto-update
 sudo systemctl status alfred-safe-update.timer
@@ -75,7 +94,7 @@ sudo systemctl status alfred-safe-update.timer
 ssh <mower> "sudo podman auto-update"
 
 # Or pull + restart directly:
-ssh <mower> "sudo podman pull ghcr.io/<user>/sunray:latest && sudo systemctl restart sunray"
+ssh <mower> "sudo podman pull ghcr.io/<user>/sunray:<tag> && sudo systemctl restart sunray"
 ```
 
 ### Management

@@ -12,19 +12,29 @@ Build and modify the Sunray firmware for Alfred mowers running on RPi 4B (aarch6
 
 ## Build system
 
-### Native build (on RPi)
+### IMPORTANT: Never build locally
+
+**Do NOT build firmware on the workstation or on the mower.** All builds go through GitHub Actions CI which cross-compiles for arm64 via QEMU and pushes to `ghcr.io`. To verify a change compiles, push to a PR branch and check the CI build status.
+
+### Release channels
+
+| Channel | Tag | Trigger | Target mowers |
+|---|---|---|---|
+| **alpha** | `:alpha` | Every push to `main` (merged PR) | batman (guinea pig) |
+| **release** | `:latest` + `:vX.Y.Z` | Git tag push (`vX.Y.Z`) | All mowers |
+
+- **batman** is the test mower — receives every merged changeset via `:alpha`
+- Each feature/fix should be a **separate PR** so each merge produces an individual alpha build
+- Alpha firmware version includes the short SHA: `Sunray,1.0.331-autoditac.1-alpha.abc1234`
+- Release firmware version is clean: `Sunray,1.0.331-autoditac.1`
+
+### Cross-compile via Docker (CI only)
 
 ```bash
-cd linux
-mkdir -p build && cd build
-cmake -DCONFIG_FILE=../../configs/config.h ..
-make -j$(nproc)
-```
-
-### Cross-compile via Docker (on x86_64 workstation)
-
-```bash
-docker buildx build --platform linux/arm64 -t sunray .
+# This happens in GitHub Actions, not locally:
+docker buildx build --platform linux/arm64 \
+  --build-arg FIRMWARE_SHA=abc1234 \
+  -t sunray .
 ```
 
 ### Config selection
@@ -32,11 +42,10 @@ docker buildx build --platform linux/arm64 -t sunray .
 The CMake build copies the config file to `sunray/config.h` before compiling:
 
 ```bash
-# Use the shared config (default in Dockerfile)
-cmake -DCONFIG_FILE=../../configs/config.h ..
+# Used in Dockerfile:
+cmake -DCONFIG_FILE=../../configs/config.h -DFIRMWARE_SHA=abc1234 ..
 
-# Or use the upstream template directly
-cmake ..
+# FIRMWARE_SHA is empty for release builds
 ```
 
 ## Key source files
@@ -78,7 +87,7 @@ Where `L` = wheelBaseCm/100, `r` = wheelDiameter/2000
 #define MIN_WHEEL_SPEED  0.05  // minimum wheel speed (m/s) to maintain traction on Alfred's heavy nose
 ```
 
-Activates when inner wheel is slow but positive. Drives it backward proportionally. Excluded during docking/undocking. Guarded by `#ifdef`.
+During forward/reverse tracking: clamps inner wheel to +MIN_WHEEL_SPEED (same direction of travel) to skip the dead zone. During rotation in place (linear ≈ 0): counter-rotates both wheels at ±MIN_WHEEL_SPEED. Excluded during docking/undocking. Guarded by `#ifdef`.
 
 ## Adding a config option
 

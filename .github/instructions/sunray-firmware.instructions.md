@@ -28,6 +28,21 @@ Sunray is a C++ firmware for RTK-GPS robot mowers, originally targeting Arduino 
 - Source globs: all `sunray/**/*.cpp` + `linux/src/**/*.cpp` + `sunray/sunray.ino`
 - Excludes: `agcm4|due|esp` patterns (other platform targets)
 
+### IMPORTANT: Never build locally
+
+**Do NOT build firmware on the workstation or on the mower.** All builds go through GitHub Actions CI which cross-compiles for arm64 via QEMU and pushes to `ghcr.io`. To verify a change compiles, push to a PR branch and check the CI build status.
+
+### Release channels
+
+| Channel | Tag | When | Mowers |
+|---|---|---|---|
+| **alpha** | `:alpha` | Every push to `main` (merged PR) | batman (guinea pig) |
+| **release** | `:latest` + `:vX.Y.Z` | Git tag push (`vX.Y.Z`) | All mowers |
+
+- **batman** is the test mower — it runs the `:alpha` tag and receives every merged changeset automatically
+- Other mowers (robin) run `:latest` and only update on tagged releases
+- Each feature/fix should be a **separate PR** so that each merged commit produces an individual alpha build that can be assessed in isolation on batman
+
 ## Config Management
 
 ### Shared config: `configs/config.h`
@@ -83,6 +98,8 @@ When the inner wheel would be commanded slowly forward during a turn, drive it b
 - Config hardcoded to `configs/config.h` in Dockerfile
 - Runtime on mowers via Podman/Quadlet (daemonless, native systemd)
 - Container runs privileged with host networking (serial, I2C, GPIO access)
+- **Alpha builds**: CI passes `FIRMWARE_SHA` build arg → CMake defines it → firmware version becomes `Sunray,1.0.331-autoditac.1-alpha.<short-sha>`
+- **Release builds**: no `FIRMWARE_SHA` → firmware version stays `Sunray,1.0.331-autoditac.1`
 
 ## Testing
 
