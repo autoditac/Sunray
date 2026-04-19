@@ -16,5 +16,13 @@ fi
 # Forward SIGTERM to the sunray process for graceful shutdown
 trap 'kill -TERM "$SUNRAY_PID" 2>/dev/null; wait "$SUNRAY_PID"' SIGTERM SIGINT
 
-echo "Starting sunray..."
+# Persist map.bin / state.bin across container updates.
+# Sunray's Storage.cpp and map.cpp open these files with a *relative*
+# path, so they land in the CWD.  The named volume is mounted at
+# /opt/sunray/data — run the binary from that directory so state
+# survives `podman auto-update`.
+mkdir -p /opt/sunray/data
+cd /opt/sunray/data
+
+echo "Starting sunray (cwd=$(pwd))..."
 exec /usr/bin/stdbuf -oL -eL /opt/sunray/sunray "$@"
