@@ -31,10 +31,28 @@ void LineTracker::trackLine(bool runControl){
   // Use path segment direction (lastTarget→target) instead of robot→target.
   // When the robot is very close to the target, robot→target angle becomes
   // numerically unstable and can swing wildly, causing wrong rotation direction
-  // (upstream #25).  Fall back to robot→target only when lastTarget==target.
+  // (upstream #25).  Fall back to robot→target in two cases:
+  //   1. lastTarget == target (segment is degenerate)
+  //   2. rover has OVERSHOT the target along the segment direction.
+  //      Observed on batman 2026-04-19 18:05: after pivoting onto a new
+  //      segment, the rover drifted past the target perpendicular to the
+  //      segment (y=9.00 past target y=9.15) while segment-direction kept
+  //      ordering "drive ESE", so it never pivoted back towards the target
+  //      and drove straight into an exclusion zone.  Detected via the sign
+  //      of the scalar product (target - robot) · (target - lastTarget):
+  //      positive = target still ahead along segment, negative = overshot.
   float segLen = distance(lastTarget.x(), lastTarget.y(), target.x(), target.y());
   float targetDelta;
-  if (segLen > 0.01f)
+  bool useSegmentDirection = false;
+  if (segLen > 0.01f) {
+    float segDx = target.x() - lastTarget.x();
+    float segDy = target.y() - lastTarget.y();
+    float toTgtDx = target.x() - stateEstimator.stateX;
+    float toTgtDy = target.y() - stateEstimator.stateY;
+    float dot = segDx * toTgtDx + segDy * toTgtDy;
+    if (dot > 0.0f) useSegmentDirection = true;
+  }
+  if (useSegmentDirection)
     targetDelta = pointsAngle(lastTarget.x(), lastTarget.y(), target.x(), target.y());
   else
     targetDelta = pointsAngle(stateEstimator.stateX, stateEstimator.stateY, target.x(), target.y());
