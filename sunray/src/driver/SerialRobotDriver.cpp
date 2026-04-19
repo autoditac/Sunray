@@ -247,13 +247,14 @@ void SerialRobotDriver::requestSummary(){
 
 
 // request MCU motor PWM
-// Alfred MCU expects: left,right,mow (upstream #151 fix)
+// Alfred MCU expects upstream Ardumower order: right,left,mow
+// (see revert of #151 — fix reintroduced broken rotation on Alfred)
 void SerialRobotDriver::requestMotorPwm(int leftPwm, int rightPwm, int mowPwm){
   String req;
   req += "AT+M,";
-  req += leftPwm;      
+  req += rightPwm;      
   req += ",";
-  req += rightPwm;    
+  req += leftPwm;    
   req += ",";  
   req += mowPwm;
   //if (abs(mowPwm) > 0)
@@ -275,11 +276,12 @@ void SerialRobotDriver::motorResponse(){
     if ((ch == ',') || (idx == cmd.length()-1)){
       int intValue = cmd.substring(lastCommaIdx+1, ch==',' ? idx : idx+1).toInt();
       float floatValue = cmd.substring(lastCommaIdx+1, ch==',' ? idx : idx+1).toFloat();      
-      // Alfred MCU sends: left,right,mow,... (upstream #151 fix)
+      // Alfred MCU sends upstream Ardumower order: right,left,mow,...
+      // (see revert of #151 — fix reintroduced broken rotation on Alfred)
       if (counter == 1){                            
-        encoderTicksLeft = intValue;
+        encoderTicksRight = intValue;  // ag
       } else if (counter == 2){
-        encoderTicksRight = intValue;
+        encoderTicksLeft = intValue;   // ag
       } else if (counter == 3){
         encoderTicksMow = intValue;
       } else if (counter == 4){
