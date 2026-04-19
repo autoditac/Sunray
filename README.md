@@ -104,6 +104,10 @@ For deeper mechanical analysis — CoG effects, traction envelope,
 rotate-in-place physics, and proposed control-software fixes — see
 [doc/steering-analysis-2026-04.md](doc/steering-analysis-2026-04.md).
 
+For the RM18 drive-controller firmware (AT protocol, over-current
+behaviour, current-sense calibration, pin map) see
+[doc/RM18_Firmware_Interface.md](doc/RM18_Firmware_Interface.md).
+
 ## Hardware design challenges
 
 The Alfred (Güde GRR 240.1) was designed for **random-path, wire-guided
