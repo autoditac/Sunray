@@ -6,6 +6,7 @@
 | **Date** | 2026-04-19 |
 | **Author** | Rouven Sacha |
 | **Scope** | Re-analysis of Sunray steering for Alfred; validation of ADR-004 fix; proposal for remaining stall issues |
+| **Base platform** | Güde **GRR 240.1** (part no. 95447-01058) — commodity robot mower converted to Sunray/Alfred |
 | **Related** | [ADR-004](adr/ADR-004-Two-Wheel-Turn-Fix.md), [Motor_Control_Alfred.md](Motor_Control_Alfred.md) |
 
 ---
@@ -54,7 +55,9 @@ A major open question for this analysis. Two competing hypotheses:
 The ADR-004 regime and §2.2 envelope derivation assume this. Inner wheel commanded below break-away PWM → doesn't rotate → mower pivots on outer wheel.
 
 **H2 — traction-limited (slip dominates)**
-Alfred has **rear-wheel drive with a nose-heavy chassis** (mow motor + front-mounted mow disc). **Measured 2026-04-19:** 7.0 kg on the rear axle out of 16.0 kg total = **43.75 % rear weight** (bathroom scale, ±0.5 kg). Per drive wheel: ~3.5 kg × 9.81 m/s² ≈ **34 N normal force**. At a friction coefficient of 0.6 on dry grass, that yields ~**20 N traction per wheel**.
+Alfred has **rear-wheel drive with a nose-heavy chassis** (mow motor + front-mounted battery + front-mounted mow disc). **Measured 2026-04-19:** 7.0 kg on the rear axle out of 16.0 kg total = **43.75 % rear weight** (bathroom scale, ±0.5 kg). Per drive wheel: ~3.5 kg × 9.81 m/s² ≈ **34 N normal force**. At a friction coefficient of 0.6 on dry grass, that yields ~**20 N traction per wheel**.
+
+**Front support clarification (2026-04-19):** GRR 240.1 parts list (#58 + 4 × #60) confirms **two swivel casters on sealed ball bearings** — not fixed skids, not a single centre caster. Low break-out torque is expected, so the "mower scrubs around its nose" worst-case scenario is **less severe than initially feared**. H2 therefore narrows further to wet-grass / contaminated-bearing edge cases and pure rotate-in-place.
 
 What this implies for the different motion regimes:
 
@@ -88,14 +91,17 @@ The front caster is a wildcard: if it doesn't swivel freely (bearing friction, d
 
 | Fact | Status | Source |
 |---|---|---|
-| Drive wheels are at rear | Known | `FREEWHEEL_IS_AT_BACKSIDE = false` in config |
-| Mow disc mounted at front | Known | Mechanical drawing |
+| Base platform | Güde **GRR 240.1** (95447-01058) | Operator notes + parts list |
+| Drive wheels are at rear | Known | `FREEWHEEL_IS_AT_BACKSIDE = false` + parts list (#51/55) |
+| Mow disc + battery mounted at front | Known | Parts list (#38, #86) |
 | CoG position / rear weight fraction | **Measured: 43.75 % (7.0/16.0 kg)** | Bathroom scale, 2026-04-19, ±0.5 kg |
-| Front caster type (swivel / resistance) | **Unknown** | Q2 in §3.1 |
+| Front support type | **Two swivel casters, ball-bearing** | Parts list (#58 + 4 × #60) — 2026-04-19 |
+| Caster break-out torque (actual) | **Unknown** | Manual spin test — Q2 follow-up |
 | Motor current during a failed turn | **Unknown** | Needs STEER log (§6.1) |
 | GPS/IMU heading rate during a failed turn | **Unknown** | Needs STEER log extended with `omega_gps` |
 | Break-away PWM per wheel | **Unknown** | T1/T2 bench test (§6.3) |
 | Tyre friction coefficient on grass | **Unknown** | Hard to measure directly; inferred from slip events |
+| Optional rear-wheel weights available | **Yes** (part 95446-01070) | H2 mechanical mitigation lever |
 
 **We cannot pick between H1 and H2 from static code analysis.** The debugging plan in §6 is now explicitly designed to discriminate them on the first instrumented run.
 
@@ -174,18 +180,39 @@ motorLeftPWMCurr = motorLeftPWMCurr + motorLeftPID.y;
 
 ## 3. Alfred Chassis Mechanics
 
+The Alfred conversion is built on a **Güde GRR 240.1** commodity robot mower (part no. 95447-01058). The Sunray/Alfred project replaces the OEM mainboard with a Raspberry Pi 4B + STM32 co-processor but **keeps the chassis, drive motors, mow motor, and wheels unchanged**. Relevant mechanical facts confirmed from the GRR 240.1 parts list:
+
+![Güde GRR 240.1 exploded view](images/guede-grr-240.1-exploded.png)
+*Exploded view of the GRR 240.1 chassis. Key parts referenced below; full numbered part list kept in the operator's maintenance notes.*
+
+| Part # | Item | Relevance |
+|---|---|---|
+| 51 | Motor Radantrieb (drive motor) ×2 | RM24 rear-drive motors |
+| 53–55 | Welle / Rad mit Noppen ×2 | Rear wheels, 205 mm knobbed rubber |
+| 58 | Rad vorne komplett ×2 | **Two** front caster wheels (Schwenkrollen) |
+| 60 | Kugellager 6000 geschlossen ×**4** | 2 ball bearings per front caster → swivel axis runs on ball bearings, **not** plain bushings |
+| 63 | Gummischeibe Radaufnahme | Rubber damping disc in the caster mount |
+| 64 | Fahrsensor | Ground-motion / drive sensor — potentially a second ground-truth channel (see §6.6) |
+| 38 | Motor Mähwerk | Front-mounted mow motor |
+| 86 | Li-Ion Akkupack 3 Ah / 28 V | Front-mounted battery → nose-heavy |
+| 95446-01070 | **Radgewichte Satz / Rad** (optional) | **Official rear-wheel weight accessory** — mechanical lever for H2 (traction) if confirmed |
+
 | Property | Value | Implication |
 |---|---|---|
 | Mass | 16 kg | High static friction |
 | Wheelbase | 39 cm | Short — rotations have small leverage |
-| Drive wheels | Rear, 205 mm | Large — low PWM = low torque |
-| Front | Passive caster/skid (nose-heavy) | Fights direction change on sticky ground |
-| Mow disc | Front-mounted | Moves CoG forward |
+| Drive wheels | **Rear**, 205 mm, knobbed rubber, 2× RM24 | Large → low PWM = low torque per unit speed |
+| Front | **Two castor wheels** (swivel type, ball-bearing supported, part 58/60) | Can re-orient with chassis motion — break-out torque expected low |
+| Mow disc + battery | Both front-mounted | Moves CoG forward |
 | PID output | PWM ±255 | Asymmetric static-friction break-away |
+
+**Caster-bearing update (Q2 answered 2026-04-19):** the parts list shows 4 × "Kugellager 6000 geschlossen" (sealed 6000-series ball bearings) distributed across the 2 front caster assemblies — i.e. **2 bearings per caster**. One is the horizontal rolling-axis bearing, the other is most likely the **vertical swivel-axis bearing**. This matters: ball-bearing swivels have **much lower break-out torque** than plain-bushing swivels. H2 (traction-limited) therefore **cannot rely on front-caster drag as a major contributor** — it has to come from lateral rear-wheel scrub alone, which given §1.2's numbers should not bind during arc-following.
+
+Revised H2 assessment: **likely secondary to H1** on dry grass. H2 could still dominate on (a) wet grass with significantly lower μ, (b) rotate-in-place commands where both rear wheels are in pure lateral scrub and no forward motion helps the castors re-align, or (c) after dirt/grass contamination of the caster bearings.
 
 **Observed failure modes:**
 
-1. Inner wheel commanded to low forward speed → PWM below break-away → stall
+1. Inner wheel commanded to low forward speed → PWM below break-away → stall (H1, dead-zone)
 2. Mower pivots on outer wheel alone → digs turf
 3. PID integrator winds up → when command drops, residual PWM continues
 4. Stanley re-amplifies angular because robot didn't reach expected pose → escalation until GPS-stale/obstacle recovery
@@ -194,7 +221,7 @@ motorLeftPWMCurr = motorLeftPWMCurr + motorLeftPID.y;
 
 > **Q1.** ~~Weight distribution front-to-rear~~ **Answered 2026-04-19: rear axle carries 7.0 kg of 16.0 kg total → 43.75 % rear, 56.25 % front.**
 >
-> **Q2.** Front support type: single swivel castor, two fixed skids, or two fixed wheels? Trailing (aligns with motion) or leading (resists it)? **Is the caster bearing free-spinning, or does it have noticeable break-out torque when turned by hand?**
+> **Q2.** ~~Front support type~~ **Answered 2026-04-19 from Güde GRR 240.1 parts list: two swivel casters (Schwenkrollen), each supported by 2 × sealed 6000-series ball bearings (parts 58 + 60). Horizontal rolling axis + vertical swivel axis both on ball bearings → low break-out torque expected. Verify by hand: lift the front of the mower and rotate each caster yoke by its tyre; it should spin freely without detectable resistance.**
 >
 > **Q3.** Tyre material: rubber lug, smooth plastic, foam?
 >
@@ -481,6 +508,18 @@ ssh pi@batman.local 'sudo journalctl -u sunray.service --since "30 min ago" \
 4. **Zero** `KIDNAP_DETECT` from path drift > 0.5 m
 5. Video V2: no wheel spin-up digging turf on row-end turn
 
+### 6.6 Potential second ground-truth channel — `Fahrsensor` (part 64)
+
+The GRR 240.1 parts list includes a **Fahrsensor** (part 95447-01064, "drive sensor"). Its exact function on the OEM platform is currently unknown — candidates:
+
+- A Hall-effect odometer measuring wheel or chassis motion (redundant to motor encoders)
+- An optical ground-flow sensor (mouse-style — would directly see traction slip)
+- A tilt/vibration sensor for dock-detection or flip-over detection
+
+**Action item:** inspect the physical sensor on batman and determine whether the STM32 firmware exposes its reading via AT protocol. If it is a ground-flow sensor, it becomes an independent second H1/H2 discriminator alongside IMU/GPS heading rate — a slipping wheel produces shaft rotation but no ground motion, which this sensor (if optical) would show directly.
+
+This is an optional Phase 1b task; defer until primary logging is in place.
+
 ---
 
 ## 7. Roll-out Plan
@@ -493,6 +532,10 @@ One feature/fix per PR (Sunray fork workflow):
 4. **Phase 3** — Tune `PIVOT_ANGULAR_THRESHOLD`, hysteresis, `K_SOFT` from logs
 5. **Phase 4** — 48 h continuous mow on batman, confirm §6.5 criteria
 6. **Phase 5** — Git tag → `:latest` → auto-update to robin
+
+### 7.1 Mechanical mitigation — optional rear wheel weights
+
+If Phase-1 logs confirm that H2 (traction-limited slip) contributes materially — specifically if `|omega_encoder| >> |omega_gps|` on rotate-in-place commands or on wet grass — the GRR 240.1 chassis supports an **off-the-shelf mechanical fix**: Güde offers rear-wheel weights (part **95446-01070** "Radgewichte Satz / Rad", ~15 € per wheel). Mounting these shifts the CoG rearward, simultaneously (a) increasing rear normal force and therefore drive traction, and (b) reducing front load on the caster swivels. This is a cheap, reversible hardware option to test before investing in software traction-envelope clamping (§5.6).
 
 ---
 
