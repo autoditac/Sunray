@@ -54,7 +54,26 @@ A major open question for this analysis. Two competing hypotheses:
 The ADR-004 regime and §2.2 envelope derivation assume this. Inner wheel commanded below break-away PWM → doesn't rotate → mower pivots on outer wheel.
 
 **H2 — traction-limited (slip dominates)**
-Alfred has **rear-wheel drive with a nose-heavy chassis** (mow motor + front-mounted mow disc). If the CoG is roughly 60–70 % forward, each rear drive wheel carries only ~2.5–3 kg of normal force. At a friction coefficient of 0.6 on dry grass, that's ~15–18 N of available traction per wheel — which is close to the lateral scrub force during a tight turn. The front caster, bearing 10–11 kg, has large break-out friction and resists rotation; the mower tends to **scrub around its nose** rather than pivot about its centerline. Result: outer rear wheel spins freely (encoder is happy, motor current is moderate) while the robot barely turns.
+Alfred has **rear-wheel drive with a nose-heavy chassis** (mow motor + front-mounted mow disc). **Measured 2026-04-19:** 7.0 kg on the rear axle out of 16.0 kg total = **43.75 % rear weight** (bathroom scale, ±0.5 kg). Per drive wheel: ~3.5 kg × 9.81 m/s² ≈ **34 N normal force**. At a friction coefficient of 0.6 on dry grass, that yields ~**20 N traction per wheel**.
+
+What this implies for the different motion regimes:
+
+| Regime | Governing constraint | Approx. limit at measured 43.75 % rear |
+|---|---|---|
+| Straight-line drive | Static friction (tiny lateral force) | Not binding |
+| Line-tracking arc, `v = 0.3 m/s`, tight turn | Lateral `a = v·ω ≤ μ·g·f_rear` ≈ 2.6 m/s² | `ω_max ≈ 8.6 rad/s` — not binding |
+| Line-tracking arc, `v = 0.1 m/s` | same | `ω_max ≈ 26 rad/s` — not binding |
+| **Rotate-in-place on grass** | Rear-wheel lateral scrub + **front caster break-out torque** | **Often binding** — the mower "scrubs around the nose" instead of pivoting |
+| Rotate-in-place, slope / wet | Reduced μ, possibly asymmetric front-caster resistance | Often binding |
+
+So H2 is unlikely to dominate during *arc-following* at sensible speeds, but it **is** the plausible dominant mode during **rotate-in-place** (§2.4 triggers this at >20° heading error near waypoints) and during the transient at the start of tight turns where heading error is large before forward motion builds up.
+
+This reshapes the problem:
+
+- The current ADR-004 rotate-in-place clamp is **unreachable** (§4.4) → rotate-in-place currently relies entirely on the unicycle model outputs reaching break-away PWM. If traction is the limit, this silently fails.
+- The STEER log's `wGps`/`wImu` vs. `w` comparison remains the discriminator — but expect the **clearest** H2 signature to appear during **pivot requests**, not during Stanley arc-following.
+
+The front caster is a wildcard: if it doesn't swivel freely (bearing friction, dirt, grass wrap), the effective "rear weight fraction available for turning" is even lower than 43.75 % because some rear-wheel force is spent overcoming the caster's resistance to rotation. Q2 (caster type) remains important even with Q1 answered.
 
 **Why the distinction matters for the fix:**
 
@@ -71,7 +90,8 @@ Alfred has **rear-wheel drive with a nose-heavy chassis** (mow motor + front-mou
 |---|---|---|
 | Drive wheels are at rear | Known | `FREEWHEEL_IS_AT_BACKSIDE = false` in config |
 | Mow disc mounted at front | Known | Mechanical drawing |
-| CoG position | **Unknown** | Q1 in §3.1 — needs scale measurement |
+| CoG position / rear weight fraction | **Measured: 43.75 % (7.0/16.0 kg)** | Bathroom scale, 2026-04-19, ±0.5 kg |
+| Front caster type (swivel / resistance) | **Unknown** | Q2 in §3.1 |
 | Motor current during a failed turn | **Unknown** | Needs STEER log (§6.1) |
 | GPS/IMU heading rate during a failed turn | **Unknown** | Needs STEER log extended with `omega_gps` |
 | Break-away PWM per wheel | **Unknown** | T1/T2 bench test (§6.3) |
@@ -172,9 +192,9 @@ motorLeftPWMCurr = motorLeftPWMCurr + motorLeftPID.y;
 
 ### 3.1 Hardware questions — please answer before final tuning
 
-> **Q1.** Weight distribution front-to-rear (tilt onto one axis on a bathroom scale)?
+> **Q1.** ~~Weight distribution front-to-rear~~ **Answered 2026-04-19: rear axle carries 7.0 kg of 16.0 kg total → 43.75 % rear, 56.25 % front.**
 >
-> **Q2.** Front support type: single swivel castor, two fixed skids, or two fixed wheels? Trailing (aligns with motion) or leading (resists it)?
+> **Q2.** Front support type: single swivel castor, two fixed skids, or two fixed wheels? Trailing (aligns with motion) or leading (resists it)? **Is the caster bearing free-spinning, or does it have noticeable break-out torque when turned by hand?**
 >
 > **Q3.** Tyre material: rubber lug, smooth plastic, foam?
 >
@@ -327,7 +347,7 @@ If the §1.2 debugging confirms H2 (traction-limited), the envelope in §5.1 nee
 
 $$|\omega_{\mathrm{traction}}(v)| \le \frac{2\,\mu\,g\,N_{\mathrm{rear\,fraction}}}{L}$$
 
-where `N_rear_fraction` is the fraction of chassis weight on the drive wheels. For Alfred with nose-heavy CoG (estimate 35 % rear × 16 kg × 9.8 m/s² × 0.6 friction × 2 / 0.39 m ≈ **1.7 rad/s** gross cap), the hard limit is not far from the commands Stanley produces during tight turns.
+where `N_rear_fraction` is the fraction of chassis weight on the drive wheels. For Alfred with **measured 43.75 % rear weight** (7.0 / 16.0 kg), the gross cap is 2 × 0.6 × 9.81 × 0.4375 / 0.39 ≈ **13 rad/s** — well above any Stanley output, so during arc-following this is **not binding**. Traction slip is expected to dominate instead during **rotate-in-place** (front-caster break-out + rear-wheel lateral scrub) where this simple envelope does not apply; see §1.2 regime table.
 
 More interesting: the **effective** turn rate under slip is:
 
@@ -347,8 +367,8 @@ With config entries:
 
 ```cpp
 #define TRACTION_LIMIT_TURN_RATE     1
-#define MU_GRASS                     0.6f   // conservative dry grass
-#define REAR_WEIGHT_FRACTION         0.35f  // measured — Q1
+#define MU_GRASS                     0.6f    // conservative dry grass
+#define REAR_WEIGHT_FRACTION         0.4375f // measured 2026-04-19: 7.0/16.0 kg
 ```
 
 **Slip detection (online):** once per control cycle, compare commanded `ω` against measured heading rate from IMU gyroscope (already available, `imu.gyroZ`) or GPS heading differentiation:
