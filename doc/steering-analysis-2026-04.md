@@ -241,6 +241,22 @@ Revised H2 assessment: **likely secondary to H1** on dry grass. H2 could still d
 
 Currently in `sunray/motor.cpp` lines 159–240.
 
+### 4.0 Prerequisite: upstream bug #151 (encoder/PWM L/R swap) — **resolved**
+
+Before the ADR-004 patch could work reliably at all, upstream bug
+[Ardumower/Sunray#151](https://github.com/Ardumower/Sunray/issues/151) had
+to be fixed. That bug had `SerialRobotDriver.cpp` reading the Alfred MCU's
+`L,R` encoder values as `R,L` — and the same swap in `requestMotorPwm`.
+With the swap in place, any asymmetric per-wheel software correction
+(the whole premise of ADR-004 and of the new algorithm in §5) would be
+applied to the *wrong* wheel, producing unpredictable turning behaviour.
+
+The fix landed in commit [`feac90b`](https://github.com/autoditac/Sunray/commit/feac90b)
+along with four other upstream-bug patches (#161 NaN-guard, #144 Stanley
+`K_SOFT`, #172 stale-GPS jump, #25 path-segment direction) and is on the
+current `main`. Phase-1 STEER logging depends on this fix being present
+— verify before merging new logging code.
+
 ### 4.1 Bug #1 — Dead-zone gap for small negative inner-wheel commands
 
 ```cpp
@@ -295,6 +311,16 @@ The ADR decision was correct in spirit; **the implementation is buggy and needs 
 ---
 
 ## 5. Proposed Replacement Algorithm
+
+### 5.0 Migration strategy — evolve, don't rewrite
+
+The existing `#ifdef MIN_WHEEL_SPEED` block in `sunray/motor.cpp`
+(lines 207–239) is **not removed wholesale**. It is replaced in-place by
+the new geometric envelope of §5.1, keeping the same config flag name so
+no config files need to change. Rollback is a single `git revert` of the
+Phase-2 commit. Robin (currently stable) can keep running the old build
+while batman field-tests the new one; both still compile from the same
+source tree via the `alpha`/`latest` Docker tag split.
 
 ### 5.1 Geometric angular-rate envelope in the controller (PRIMARY FIX)
 
