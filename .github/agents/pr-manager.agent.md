@@ -3,14 +3,8 @@ name: pr-manager
 description: >-
   Create and manage GitHub pull requests for the Sunray fork. Handles branch
   creation, PRs, upstream syncing, and version tagging.
-tools:
-  - semantic_search
-  - grep_search
-  - file_search
-  - read_file
-  - list_dir
-  - run_in_terminal
-  - github-pull-request_create_pull_request
+tools: ['read', 'search', 'execute', 'github-pull-request_create_pull_request']
+user-invocable: false
 ---
 
 # PR Manager Agent
