@@ -108,7 +108,14 @@ void LineTracker::trackLine(bool runControl){
 
   if (!angleToTargetFits){
     // angular control (if angle to far away, rotate to next waypoint)
-    linear = 0;
+    // Pivot creep: small forward linear speed while pivoting prevents
+    // the caster from dragging sideways on grass and reduces
+    // one-wheel-stall events during heading alignment.  See config.h.
+    #ifdef PIVOT_CREEP_SPEED
+      linear = PIVOT_CREEP_SPEED;
+    #else
+      linear = 0;
+    #endif
     angular = 29.0 / 180.0 * PI; //  29 degree/s (0.5 rad/s);               
      // decide for one rotation direction (and keep it)
     if ((!rotateLeft) && (!rotateRight)) {

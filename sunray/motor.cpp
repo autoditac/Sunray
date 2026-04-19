@@ -487,6 +487,9 @@ void Motor::run() {
   // Detect when one wheel is commanded to turn but the other is near zero,
   // or when one wheel is commanded but not actually moving (stalled).
   // Uses low-pass filtered RPM to avoid false triggers from encoder noise.
+  // Also requires the commanded wheel's PWM to exceed STALL_DETECT_PWM_MIN
+  // so we don't flag events during early ramp-up or coast phases where
+  // PWM has not yet engaged the motor.
   // Rate-limited to once per second to avoid log spam.
   #ifdef MIN_WHEEL_SPEED
   {
@@ -496,12 +499,18 @@ void Motor::run() {
       float absSetR = fabs(motorRightRpmSet);
       float absCurL = fabs(motorLeftRpmCurrLP);
       float absCurR = fabs(motorRightRpmCurrLP);
+      int absPwmL = abs(motorLeftPWMCurr);
+      int absPwmR = abs(motorRightPWMCurr);
+      #ifndef STALL_DETECT_PWM_MIN
+        #define STALL_DETECT_PWM_MIN 40
+      #endif
       float rpmThreshold = 3.0; // RPM below this = effectively stopped
       float setThreshold = 5.0; // only flag if commanded RPM is above this
       bool detected = false;
       // case 1: both wheels commanded, but one is stalled
       if (absSetL > setThreshold && absSetR > setThreshold) {
-        if (absCurL < rpmThreshold && absCurR > setThreshold) {
+        if (absCurL < rpmThreshold && absCurR > setThreshold
+            && absPwmL >= STALL_DETECT_PWM_MIN) {
           CONSOLE.print("ONE-WHEEL: L stalled  setL=");
           CONSOLE.print(motorLeftRpmSet, 1);
           CONSOLE.print(" curL=");
@@ -509,10 +518,13 @@ void Motor::run() {
           CONSOLE.print(" setR=");
           CONSOLE.print(motorRightRpmSet, 1);
           CONSOLE.print(" curR=");
-          CONSOLE.println(motorRightRpmCurrLP, 1);
+          CONSOLE.print(motorRightRpmCurrLP, 1);
+          CONSOLE.print(" pwmL=");
+          CONSOLE.println(motorLeftPWMCurr);
           detected = true;
         }
-        if (absCurR < rpmThreshold && absCurL > setThreshold) {
+        if (absCurR < rpmThreshold && absCurL > setThreshold
+            && absPwmR >= STALL_DETECT_PWM_MIN) {
           CONSOLE.print("ONE-WHEEL: R stalled  setL=");
           CONSOLE.print(motorLeftRpmSet, 1);
           CONSOLE.print(" curL=");
@@ -520,12 +532,15 @@ void Motor::run() {
           CONSOLE.print(" setR=");
           CONSOLE.print(motorRightRpmSet, 1);
           CONSOLE.print(" curR=");
-          CONSOLE.println(motorRightRpmCurrLP, 1);
+          CONSOLE.print(motorRightRpmCurrLP, 1);
+          CONSOLE.print(" pwmR=");
+          CONSOLE.println(motorRightPWMCurr);
           detected = true;
         }
       }
       // case 2: only one wheel commanded (set RPM near zero for one side)
-      if (absSetL < rpmThreshold && absSetR > setThreshold) {
+      if (absSetL < rpmThreshold && absSetR > setThreshold
+          && absPwmR >= STALL_DETECT_PWM_MIN) {
         CONSOLE.print("ONE-WHEEL: L cmd=0  setL=");
         CONSOLE.print(motorLeftRpmSet, 1);
         CONSOLE.print(" setR=");
@@ -536,7 +551,8 @@ void Motor::run() {
         CONSOLE.println(angularSpeedSet, 3);
         detected = true;
       }
-      if (absSetR < rpmThreshold && absSetL > setThreshold) {
+      if (absSetR < rpmThreshold && absSetL > setThreshold
+          && absPwmL >= STALL_DETECT_PWM_MIN) {
         CONSOLE.print("ONE-WHEEL: R cmd=0  setL=");
         CONSOLE.print(motorLeftRpmSet, 1);
         CONSOLE.print(" setR=");

@@ -160,6 +160,19 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // heavy-nose chassis like Alfred where one slow wheel can't turn alone.
 #define MIN_WHEEL_SPEED  0.05  // m/s — wheels below this can't move Alfred's nose
 
+// Pivot creep: small forward linear speed added while the robot is
+// pivoting in place to align the heading (!angleToTargetFits in
+// LineTracker).  Prevents the caster from dragging sideways on grass
+// and reduces one-wheel-stall events during heading alignment.
+// Comment out to disable (pure in-place rotation).
+#define PIVOT_CREEP_SPEED  0.03  // m/s — forward creep while pivoting
+
+// Stall detector PWM threshold: the ONE-WHEEL stall detector in
+// motor.cpp only triggers when the commanded PWM magnitude is at
+// least this value.  Filters out false positives during coast or
+// the first 100-200 ms of ramp-up, when PWM has not yet engaged.
+#define STALL_DETECT_PWM_MIN  40  // 0..255
+
 // Phase-1 instrumentation for steering-analysis-2026-04: emits a
 // "STEER:" line every 100 ms with commanded vs. actual wheel state,
 // PWM, current, Stanley lateral error, and fused/IMU/encoder yaw
