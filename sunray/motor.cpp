@@ -215,24 +215,25 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
      float origL = lspeed;
      float origR = rspeed;
      bool adjusted = false;
-     if (linearSpeedSet > 0.01f) {
-       // Forward tracking: clamp inner wheel to MIN_WHEEL_SPEED forward
-       if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= MIN_WHEEL_SPEED) {
-         lspeed = MIN_WHEEL_SPEED;
+     if (fabs(linearSpeedSet) > 0.01f) {
+       // Forward/reverse tracking: clamp inner wheel MAGNITUDE to
+       // MIN_WHEEL_SPEED, preserving the sign that was geometrically
+       // requested.  Tight curves produce an inner wheel speed that is
+       // either near-zero positive (e.g. +0.006 m/s) or near-zero negative
+       // (e.g. -0.006 m/s) depending on |ang| vs lin/wheelBase; both fall
+       // inside the motor dead zone and must be lifted out of it.
+       //
+       // A previous attempt (commit 98a24ab, reverted in ba4e4f3) dropped
+       // the sign guard entirely, clobbering legitimately negative inner
+       // speeds (|rspeed| ≈ 9 RPM < MIN) to +MIN — that flipped the wheel
+       // direction once per path-tracker cycle (1 Hz sign oscillation) and
+       // looked like an R-wheel stall.  Preserving the sign avoids that.
+       if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
+         lspeed = (lspeed < 0) ? -MIN_WHEEL_SPEED : MIN_WHEEL_SPEED;
          adjusted = true;
        }
-       if (rspeed >= 0 && rspeed < MIN_WHEEL_SPEED && lspeed >= MIN_WHEEL_SPEED) {
-         rspeed = MIN_WHEEL_SPEED;
-         adjusted = true;
-       }
-     } else if (linearSpeedSet < -0.01f) {
-       // Reverse tracking: clamp inner wheel to -MIN_WHEEL_SPEED backward
-       if (lspeed <= 0 && lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
-         lspeed = -MIN_WHEEL_SPEED;
-         adjusted = true;
-       }
-       if (rspeed <= 0 && rspeed > -MIN_WHEEL_SPEED && lspeed <= -MIN_WHEEL_SPEED) {
-         rspeed = -MIN_WHEEL_SPEED;
+       if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
+         rspeed = (rspeed < 0) ? -MIN_WHEEL_SPEED : MIN_WHEEL_SPEED;
          adjusted = true;
        }
      } else {
