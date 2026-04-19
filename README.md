@@ -59,6 +59,49 @@ Podman containers alongside Sunray:
 The upstream Sunray Android/iOS app is **not supported** — its TCP socket
 protocol is not exposed outside the container.
 
+## Chassis and hardware
+
+Alfred is a conversion built on a commodity robot-mower chassis. The
+Sunray/Alfred project replaces the OEM mainboard with a Raspberry Pi 4B +
+STM32 co-processor but keeps the **chassis, drive motors, mow motor, and
+wheels unchanged**.
+
+| Item | Value |
+|---|---|
+| Base chassis | **Güde GRR 240.1** (part no. 95447-01058, also sold as **Fuxtec RB-224**) |
+| Total mass | 16.0 kg |
+| Wheelbase | ~39 cm |
+| Weight distribution (measured 2026-04-19) | 7.0 kg rear / 9.0 kg front → **43.75 % rear, 56.25 % front** |
+| Drive | Rear-wheel drive, 2 × RM24 gear motors |
+| Rear wheels | Knobbed rubber, 205 mm |
+| Front support | **Two swivel casters (Schwenkrollen)**, each on 2 × sealed 6000-series ball bearings |
+| Mow motor | Front-mounted disc, 9 swing blades |
+| Battery | Li-Ion 3 Ah / 28 V, front-mounted |
+
+**Key OEM part numbers** (from the Güde GRR 240.1 spare-parts catalogue —
+useful when ordering replacements):
+
+| Part # | Item | Qty |
+|---|---|---|
+| 95447-01051 | Motor Radantrieb (rear drive motor) | 2 |
+| 95446-01055 | Rad mit Noppen (knobbed rear wheel) | 2 |
+| 95447-01058 | Rad vorne komplett (front caster, complete) | 2 |
+| 99999-6000G | Kugellager 6000 geschlossen (sealed 6000 ball bearing) | 4 |
+| 95447-01064 | Fahrsensor (drive / motion sensor) | 1 |
+| 95447-01038 | Motor Mähwerk (mow motor) | 1 |
+| 95447-01086 | Li-Ion Akkupack 3 Ah / 28 V | 1 |
+| 95446-01070 | Radgewichte Satz / Rad (**optional** rear-wheel weight kit) | 2 |
+
+**Bearing upgrade:** the OEM front-caster bearings are steel-ring 6000
+types that corrode in wet grass. Replace with corrosion-proof polymer
+rings + glass balls — e.g.
+[igus xiros BB-6000-B180-10-GL](https://www.igus.de/product/xiros_radial_B180_GL_PA_C?artnr=BB-6000-B180-10-GL-C)
+(same 6000 footprint, drop-in).
+
+For deeper mechanical analysis — CoG effects, traction envelope,
+rotate-in-place physics, and proposed control-software fixes — see
+[doc/steering-analysis-2026-04.md](doc/steering-analysis-2026-04.md).
+
 ## Hardware design challenges
 
 The Alfred (Güde GRR 240.1) was designed for **random-path, wire-guided
@@ -90,10 +133,8 @@ freely, pulling the mower off-line.
 
 The stock caster wheels use **steel ball bearings** that are exposed to
 ground moisture (dew, rain, wet grass). These rust within one season,
-increasing rolling resistance and causing the casters to bind. Replace
-with corrosion-proof bearings — e.g.
-[igus xiros BB-6000-B180-10-GL](https://www.igus.dk/product/xiros_radial_B180_GL_PA_D)
-(xirodur B180 plastic rings, glass balls, size 6000).
+increasing rolling resistance and causing the casters to bind — see the
+igus xiros replacement noted in **Chassis and hardware** above.
 
 ### Sensors designed for random-path
 
