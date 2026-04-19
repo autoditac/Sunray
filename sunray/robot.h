@@ -160,6 +160,7 @@ void detectSensorMalfunction();
 bool detectLift();
 bool detectObstacle();
 bool detectObstacleRotation();
+bool detectGeofenceViolation();
 
 
 

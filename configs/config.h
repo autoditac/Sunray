@@ -417,6 +417,15 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 #define KIDNAP_DETECT_ALLOWED_PATH_TOLERANCE_DOCK_UNDOCK 20.2  // allowed path tolerance (m)
 #define KIDNAP_DETECT_DISTANCE_DOCK_UNDOCK 5  // distance from dock in (m) to use KIDNAP_DETECT_ALLOWED_PATH_TOLERANCE_DOCK_UNDOCK
 
+// Runtime geofence: error-stop the rover if the current position leaves the
+// perimeter polygon or enters any exclusion (no-go) polygon.  Complements
+// KIDNAP_DETECT (which only watches distance-to-planned-path).  A small
+// hysteresis suppresses GPS jitter; only active while localization is
+// LOC_GPS and not during docking maneuvers (wayMode == WAY_DOCK).
+#define GEOFENCE_ENFORCE true
+#define GEOFENCE_HYSTERESIS_SAMPLES 3  // consecutive out-of-bounds samples required to trigger
+#define GEOFENCE_CHECK_INTERVAL_MS 200  // minimum interval between geofence checks (ms)
+
 // ------ docking --------------------------------------
 // is a docking station available?
 #define DOCKING_STATION true   // use this if docking station available and mower should dock automatically

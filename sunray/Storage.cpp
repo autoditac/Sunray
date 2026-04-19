@@ -89,6 +89,7 @@ void updateStateOpText(){
         case SENS_LIFT: stateEstimator.stateOpText += "lift)"; break;
         case SENS_RAIN: stateEstimator.stateOpText += "rain)"; break;
         case SENS_STOP_BUTTON: stateEstimator.stateOpText += "stop button)"; break;
+        case SENS_GEOFENCE: stateEstimator.stateOpText += "geofence)"; break;
         default: stateEstimator.stateOpText += "unknown)"; break;
       }
       break;

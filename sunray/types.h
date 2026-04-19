@@ -32,6 +32,7 @@ enum Sensor {
       SENS_RAIN,              // rain sensor triggered
       SENS_STOP_BUTTON,       // emergency/stop button triggered
       SENS_TEMP_OUT_OF_RANGE, // temperature out-of-range triggered
+      SENS_GEOFENCE,          // rover left perimeter or entered exclusion polygon
 };
 
 #endif
