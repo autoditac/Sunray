@@ -188,37 +188,49 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    // the dead zone (0 .. MIN_WHEEL_SPEED) where there's not enough torque
    // to actually turn a heavy chassis like Alfred.
    //
-   // Differential pivot fix for Alfred's nose-heavy chassis:
-   // During turns, only the outer wheel drives the rotation while the inner
-   // wheel sits near-stationary. The outer wheel alone can't generate enough
-   // traction to pivot the heavy front, so it spins freely and digs into
-   // soft ground. Fix: when the inner wheel would be idle (in [0, MIN_WHEEL_SPEED)),
-   // drive it backward so both wheels contribute turning torque.
+   // Dead-zone guard for Alfred's nose-heavy chassis (ADR-004):
+   // Below MIN_WHEEL_SPEED the motors can't overcome static friction, so
+   // the inner wheel stalls and only the outer wheel drives — a one-wheel
+   // turn that digs into soft ground and triggers stall detection.
    //
-   // Cases:
-   //   - Gentle turns (linear>0): both forward, outer faster (no change)
-   //   - Medium turns (linear>0): inner near-idle → counter-rotate
-   //   - Rotation mode (linear=0): both near-idle → drive opposite
-   //   - Tight turns: inner already negative (no change)
-   //   - Standstill (both 0): no change
+   // Strategy:
+   //   Forward/reverse tracking (linear != 0):
+   //     Clamp the inner wheel to MIN_WHEEL_SPEED in the direction of
+   //     travel.  The turn is slightly wider than requested but the path
+   //     tracker corrects on the next cycle.  No counter-rotation — that
+   //     was too aggressive and caused oscillation + stall cascades.
+   //
+   //   Rotation in place (linear ≈ 0):
+   //     Counter-rotate both wheels at ±MIN_WHEEL_SPEED so the heavy
+   //     nose actually pivots.
+   //
    #ifdef MIN_WHEEL_SPEED
    if (!maps.isUndocking() && !maps.isDocking()) {
      float origL = lspeed;
      float origR = rspeed;
      bool adjusted = false;
-     if (linearSpeedSet >= 0) {
-       // Forward motion or rotation: inner wheel near-idle → drive backward
-       // to share turning load with outer wheel
+     if (linearSpeedSet > 0.01f) {
+       // Forward tracking: clamp inner wheel to MIN_WHEEL_SPEED forward
        if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= MIN_WHEEL_SPEED) {
-         lspeed = -MIN_WHEEL_SPEED;
+         lspeed = MIN_WHEEL_SPEED;
          adjusted = true;
        }
        if (rspeed >= 0 && rspeed < MIN_WHEEL_SPEED && lspeed >= MIN_WHEEL_SPEED) {
+         rspeed = MIN_WHEEL_SPEED;
+         adjusted = true;
+       }
+     } else if (linearSpeedSet < -0.01f) {
+       // Reverse tracking: clamp inner wheel to -MIN_WHEEL_SPEED backward
+       if (lspeed <= 0 && lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
+         lspeed = -MIN_WHEEL_SPEED;
+         adjusted = true;
+       }
+       if (rspeed <= 0 && rspeed > -MIN_WHEEL_SPEED && lspeed <= -MIN_WHEEL_SPEED) {
          rspeed = -MIN_WHEEL_SPEED;
          adjusted = true;
        }
-       // Rotation mode: both wheels near-idle (e.g. linear=0, small angular)
-       // → drive opposite to ensure actual rotation
+     } else {
+       // Rotation in place (linear ≈ 0): counter-rotate for heavy chassis
        if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= 0 && rspeed < MIN_WHEEL_SPEED
            && fabs(angularSpeedSet) > 0.01) {
          if (angularSpeedSet > 0) { // turning left
@@ -230,37 +242,72 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
          }
          adjusted = true;
        }
-     } else {
-       // Reverse motion: inner wheel near-idle → drive forward to share turning load
-       if (lspeed <= 0 && lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
-         lspeed = MIN_WHEEL_SPEED;
-         adjusted = true;
-       }
-       if (rspeed <= 0 && rspeed > -MIN_WHEEL_SPEED && lspeed <= -MIN_WHEEL_SPEED) {
-         rspeed = MIN_WHEEL_SPEED;
-         adjusted = true;
-       }
      }
      if (adjusted) {
-       CONSOLE.print("MIN_WHEEL_SPEED adj: lin=");
-       CONSOLE.print(linearSpeedSet, 3);
-       CONSOLE.print(" ang=");
-       CONSOLE.print(angularSpeedSet, 3);
-       CONSOLE.print(" L:");
-       CONSOLE.print(origL, 3);
-       CONSOLE.print("->");
-       CONSOLE.print(lspeed, 3);
-       CONSOLE.print(" R:");
-       CONSOLE.print(origR, 3);
-       CONSOLE.print("->");
-       CONSOLE.println(rspeed, 3);
+       static unsigned long lastLogTime = 0;
+       if (millis() - lastLogTime > 2000) {
+         lastLogTime = millis();
+         CONSOLE.print("MIN_WHEEL_SPEED adj: lin=");
+         CONSOLE.print(linearSpeedSet, 3);
+         CONSOLE.print(" ang=");
+         CONSOLE.print(angularSpeedSet, 3);
+         CONSOLE.print(" L:");
+         CONSOLE.print(origL, 3);
+         CONSOLE.print("->");
+         CONSOLE.print(lspeed, 3);
+         CONSOLE.print(" R:");
+         CONSOLE.print(origR, 3);
+         CONSOLE.print("->");
+         CONSOLE.println(rspeed, 3);
+       }
      }
    }
    #endif
 
    // RPM = V / (2*PI*r) * 60
    motorRightRpmSet =  rspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;   
-   motorLeftRpmSet = lspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;   
+   motorLeftRpmSet = lspeed / (PI*(((float)wheelDiameter)/1000.0)) * 60.0;
+
+   // ----- STEER logging (Phase 1 of steering-analysis-2026-04) -----
+   //
+   // One line every 100 ms while the wheels are commanded to move.  Captures
+   // enough state to classify each steering event as dead-zone stall, load
+   // stall, traction slip, or healthy turn (see §6.1 of the analysis doc):
+   //
+   //   v,  w     = commanded linear / angular speed (input to unicycle)
+   //   rpmLset   = left-wheel set-point after any dead-zone adjustment
+   //   rpmL      = actual left-wheel RPM (encoder, low-pass filtered)
+   //   pwmL, iL  = actuator effort (PWM + motor current)
+   //   lat       = Stanley cross-track error in metres
+   //   wFus,wImu = fused and IMU-only yaw rate in rad/s (ground truth)
+   //   wEnc      = yaw rate derived from wheel encoders
+   //
+   // The difference (wEnc - wImu) directly reveals traction slip: if the
+   // wheels say we're rotating but the IMU disagrees, the contact patch
+   // is sliding.  Disable via `#undef STEER_LOG` in config.h.
+   #ifdef STEER_LOG
+   static unsigned long lastSteerLogTime = 0;
+   if ((fabs(motorLeftRpmSet) + fabs(motorRightRpmSet) > 0.5f)
+       && (millis() - lastSteerLogTime > 100)) {
+     lastSteerLogTime = millis();
+     CONSOLE.print("STEER:");
+     CONSOLE.print(" v=");       CONSOLE.print(linearSpeedSet, 3);
+     CONSOLE.print(" w=");       CONSOLE.print(angularSpeedSet, 3);
+     CONSOLE.print(" rpmLset="); CONSOLE.print(motorLeftRpmSet, 1);
+     CONSOLE.print(" rpmRset="); CONSOLE.print(motorRightRpmSet, 1);
+     CONSOLE.print(" rpmL=");    CONSOLE.print(motorLeftRpmCurrLP, 1);
+     CONSOLE.print(" rpmR=");    CONSOLE.print(motorRightRpmCurrLP, 1);
+     CONSOLE.print(" pwmL=");    CONSOLE.print(motorLeftPWMCurr);
+     CONSOLE.print(" pwmR=");    CONSOLE.print(motorRightPWMCurr);
+     CONSOLE.print(" iL=");      CONSOLE.print(motorLeftSenseLP, 2);
+     CONSOLE.print(" iR=");      CONSOLE.print(motorRightSenseLP, 2);
+     CONSOLE.print(" lat=");     CONSOLE.print(stateEstimator.lateralError, 3);
+     CONSOLE.print(" wFus=");    CONSOLE.print(stateEstimator.stateDeltaSpeedLP, 3);
+     CONSOLE.print(" wImu=");    CONSOLE.print(stateEstimator.stateDeltaSpeedIMU, 3);
+     CONSOLE.print(" wEnc=");    CONSOLE.print(stateEstimator.stateDeltaSpeedWheels, 3);
+     CONSOLE.println();
+   }
+   #endif
 }
 
 
