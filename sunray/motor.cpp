@@ -10,30 +10,6 @@
 #include "Arduino.h"
 
 
-// ---------------------------------------------------------------------------
-// Traction breakaway kick (Phase 2 of steering-analysis-2026-04, option A)
-//
-// Alfred's nose-heavy chassis sometimes fails to start an in-place rotation
-// even when both wheel setpoints are well above MIN_WHEEL_SPEED.  Observed
-// 2026-04-19 around 15:05 / 15:06 on batman: setL=-9.2 RPM, setR=+9.2 RPM
-// commanded (~0.10 m/s each), but encoders stay near 0 -> classic static
-// friction stall.  The PID's slow output ramp (MOTOR_PID_RAMP) cannot deliver
-// the impulsive torque needed to break loose.
-//
-// Mitigation: when sense() detects a one-wheel stall during in-place
-// rotation, force both wheel PWMs to +/- pwmMax (signs matching the
-// commanded direction) for a short window.  The PID is reset to clear any
-// integrator wind-up, then resumes normal control once the chassis is
-// moving.  Cooldown prevents thrashing if the kick itself fails.
-// ---------------------------------------------------------------------------
-static unsigned long tractionKickEndMs = 0;
-static unsigned long tractionKickCooldownUntilMs = 0;
-static int tractionKickPwmL = 0;
-static int tractionKickPwmR = 0;
-static const unsigned long TRACTION_KICK_DURATION_MS = 200;
-static const unsigned long TRACTION_KICK_COOLDOWN_MS = 2000;
-
-
 void Motor::begin() {
 	pwmMax = MOTOR_PID_LIMIT;
  
@@ -528,7 +504,6 @@ void Motor::run() {
       float setThreshold = 5.0; // only flag if commanded RPM is above this
       bool detected = false;
       // case 1: both wheels commanded, but one is stalled
-      bool stalledCase1 = false;
       if (absSetL > setThreshold && absSetR > setThreshold) {
         if (absCurL < rpmThreshold && absCurR > setThreshold) {
           CONSOLE.print("ONE-WHEEL: L stalled  setL=");
@@ -540,7 +515,6 @@ void Motor::run() {
           CONSOLE.print(" curR=");
           CONSOLE.println(motorRightRpmCurrLP, 1);
           detected = true;
-          stalledCase1 = true;
         }
         if (absCurR < rpmThreshold && absCurL > setThreshold) {
           CONSOLE.print("ONE-WHEEL: R stalled  setL=");
@@ -552,29 +526,7 @@ void Motor::run() {
           CONSOLE.print(" curR=");
           CONSOLE.println(motorRightRpmCurrLP, 1);
           detected = true;
-          stalledCase1 = true;
         }
-      }
-      // Traction breakaway kick: fire when one wheel stalled during in-place
-      // rotation (linear ~ 0, angular significant) and not on cooldown.  Skip
-      // during docking so the contact-alignment phase stays gentle.
-      if (stalledCase1
-          && fabs(linearSpeedSet) < 0.02f
-          && fabs(angularSpeedSet) > 0.1f
-          && millis() > tractionKickCooldownUntilMs
-          && !maps.isDocking()) {
-        tractionKickPwmL = (motorLeftRpmSet  >= 0) ?  pwmMax : -pwmMax;
-        tractionKickPwmR = (motorRightRpmSet >= 0) ?  pwmMax : -pwmMax;
-        tractionKickEndMs = millis() + TRACTION_KICK_DURATION_MS;
-        tractionKickCooldownUntilMs = millis() + TRACTION_KICK_COOLDOWN_MS;
-        CONSOLE.print("TRACTION-KICK: pwmL=");
-        CONSOLE.print(tractionKickPwmL);
-        CONSOLE.print(" pwmR=");
-        CONSOLE.print(tractionKickPwmR);
-        CONSOLE.print(" dur=");
-        CONSOLE.print((int)TRACTION_KICK_DURATION_MS);
-        CONSOLE.print("ms ang=");
-        CONSOLE.println(angularSpeedSet, 3);
       }
       // case 2: only one wheel commanded (set RPM near zero for one side)
       if (absSetL < rpmThreshold && absSetR > setThreshold) {
@@ -844,16 +796,6 @@ void Motor::control(){
   if (!tractionMotorsEnabled){
     //CONSOLE.println("!tractionMotorsEnabled");
     motorLeftPWMCurr = motorRightPWMCurr = 0;
-  }
-
-  // Override PID output during the breakaway kick window (see header comment).
-  // Reset PIDs while kicking so integrator wind-up doesn't cause overshoot
-  // when control resumes.
-  if (millis() < tractionKickEndMs && tractionMotorsEnabled) {
-    motorLeftPWMCurr  = tractionKickPwmL;
-    motorRightPWMCurr = tractionKickPwmR;
-    motorLeftPID.reset();
-    motorRightPID.reset();
   }
 
   speedPWM(motorLeftPWMCurr, motorRightPWMCurr, motorMowPWMCurr);
