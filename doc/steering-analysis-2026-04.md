@@ -221,7 +221,9 @@ Revised H2 assessment: **likely secondary to H1** on dry grass. H2 could still d
 
 > **Q1.** ~~Weight distribution front-to-rear~~ **Answered 2026-04-19: rear axle carries 7.0 kg of 16.0 kg total → 43.75 % rear, 56.25 % front.**
 >
-> **Q2.** ~~Front support type~~ **Answered 2026-04-19 from Güde GRR 240.1 parts list: two swivel casters (Schwenkrollen), each supported by 2 × sealed 6000-series ball bearings (parts 58 + 60). Horizontal rolling axis + vertical swivel axis both on ball bearings → low break-out torque expected. Verify by hand: lift the front of the mower and rotate each caster yoke by its tyre; it should spin freely without detectable resistance.**
+> **Q2.** ~~Front support type~~ **Answered 2026-04-19 from Güde GRR 240.1 parts list: two swivel casters (Schwenkrollen), each supported by 2 × sealed 6000-series ball bearings (parts 58 + 60). Horizontal rolling axis + vertical swivel axis both on ball bearings → low break-out torque expected.**
+>
+> **Q2b.** ~~Caster free-spin check~~ **Answered 2026-04-19 by operator: casters spin freely, no significant resistance detected by hand. Bearings are healthy — H2 (traction limited by caster drag) is therefore effectively ruled out for the current mower condition. Re-check annually or after a wet season.**
 >
 > **Q3.** ~~Tyre material~~ **Answered 2026-04-19 from parts list (part 95446-01055 "Rad mit Noppen"): knobbed/lugged rubber on the rear drive wheels. Front casters (part 95447-01058) are smooth plastic rollers typical for indoor-castor-style wheels. This gives high μ at the drive and low μ at the front — favourable for H1 interpretation.**
 >
@@ -541,10 +543,20 @@ If Phase-1 logs confirm that H2 (traction-limited slip) contributes materially �
 
 ## 8. Open Questions for the Operator
 
-1. Answers to **§3.1 Q1–Q7** (chassis measurements)
-2. Can **break-away PWM tests T1, T2** be run this week on blocks?
-3. Is there a historical log from **before ADR-004** was applied? (A/B baseline)
-4. Row-end turn preference: slow-down-plus-wider-arc, or always rotate-in-place?
+### 8.1 Blocker status for Phase-1 implementation
+
+**None of the remaining questions block starting Phase 1 (instrumented STEER logging) or Phase 2 (new algorithm).** The algorithm will be built with a configurable `MIN_EFFECTIVE_PWM` parameter; its initial default comes from a first-principles estimate, and the eventual operational value is extracted from Phase-1 logs rather than a bench test. This is more robust than a one-shot T1/T2 measurement on concrete anyway, because the operational surface is grass.
+
+### 8.2 Non-blocking follow-ups
+
+1. **Q4 — break-away PWM on concrete (T1/T2):** optional sanity check; useful if logs prove ambiguous. Not required before the patch.
+2. **Q5 — historical `ERROR motor overload` symmetry (L vs R):** quick grep over archived logs; tells us whether one motor is mechanically weaker. Not required before the patch.
+3. **Q6 — rear-wheel camber / toe visual check:** 1-minute visual inspection. Not required before the patch but useful for explaining any residual bias.
+4. **Q7 — straight-line drift on flat ground:** one 5 m drive with `angular = 0`, measure lateral deviation. Useful bias-calibration input; not blocking.
+5. **Pre-ADR-004 historical log:** would give us an A/B baseline. Nice to have, not required.
+6. **Row-end turn preference:** slow-down-plus-wider-arc, or always rotate-in-place? Informs §5.2 policy choice; default is context-dependent (rotate-in-place on firm ground, arc on soft).
+7. **Fahrsensor (part 95447-01064):** physical identification — Hall / optical / tilt? Informs §6.6 second-channel possibility. Defer to Phase 1b.
+8. **Rear wheel weights (part 95446-01070):** not yet in hand as of 2026-04-19. Mechanical backup plan; order only if Phase-1 logs show residual traction issues despite the software fix.
 
 ---
 
