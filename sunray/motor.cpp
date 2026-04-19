@@ -216,22 +216,27 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
      float origR = rspeed;
      bool adjusted = false;
      if (linearSpeedSet > 0.01f) {
-       // Forward tracking: clamp inner wheel to MIN_WHEEL_SPEED forward
-       if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= MIN_WHEEL_SPEED) {
+       // Forward tracking: inner wheel must be at least MIN_WHEEL_SPEED
+       // forward.  On a tight turn the inner wheel can go *slightly
+       // negative* (lspeed=+0.184, rspeed=-0.006 observed 2026-04-19
+       // 15:05:39): a previous sign-guard (rspeed >= 0) let these cases
+       // through, causing one-wheel stalls.  Use magnitude test only.
+       if (lspeed < MIN_WHEEL_SPEED && rspeed >= MIN_WHEEL_SPEED) {
          lspeed = MIN_WHEEL_SPEED;
          adjusted = true;
        }
-       if (rspeed >= 0 && rspeed < MIN_WHEEL_SPEED && lspeed >= MIN_WHEEL_SPEED) {
+       if (rspeed < MIN_WHEEL_SPEED && lspeed >= MIN_WHEEL_SPEED) {
          rspeed = MIN_WHEEL_SPEED;
          adjusted = true;
        }
      } else if (linearSpeedSet < -0.01f) {
-       // Reverse tracking: clamp inner wheel to -MIN_WHEEL_SPEED backward
-       if (lspeed <= 0 && lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
+       // Reverse tracking: symmetric — inner wheel must be at most
+       // -MIN_WHEEL_SPEED backward, regardless of sign.
+       if (lspeed > -MIN_WHEEL_SPEED && rspeed <= -MIN_WHEEL_SPEED) {
          lspeed = -MIN_WHEEL_SPEED;
          adjusted = true;
        }
-       if (rspeed <= 0 && rspeed > -MIN_WHEEL_SPEED && lspeed <= -MIN_WHEEL_SPEED) {
+       if (rspeed > -MIN_WHEEL_SPEED && lspeed <= -MIN_WHEEL_SPEED) {
          rspeed = -MIN_WHEEL_SPEED;
          adjusted = true;
        }
