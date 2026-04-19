@@ -79,18 +79,20 @@ wheels unchanged**.
 | Battery | Li-Ion 3 Ah / 28 V, front-mounted |
 
 **Key OEM part numbers** (from the Güde GRR 240.1 spare-parts catalogue —
-useful when ordering replacements):
+useful when ordering replacements; prices incl. 19 % VAT from
+[baumarkt-ersatzteile.de](https://www.baumarkt-ersatzteile.de/gartentechnik/schnittbreite-bis-33-cm/95447-roboter-rasenmaeher-grr-2401/78072-serie-01/),
+retrieved 2026-04-19):
 
-| Part # | Item | Qty |
-|---|---|---|
-| 95447-01051 | Motor Radantrieb (rear drive motor) | 2 |
-| 95446-01055 | Rad mit Noppen (knobbed rear wheel) | 2 |
-| 95447-01058 | Rad vorne komplett (front caster, complete) | 2 |
-| 99999-6000G | Kugellager 6000 geschlossen (sealed 6000 ball bearing) | 4 |
-| 95447-01064 | Fahrsensor (drive / motion sensor) | 1 |
-| 95447-01038 | Motor Mähwerk (mow motor) | 1 |
-| 95447-01086 | Li-Ion Akkupack 3 Ah / 28 V | 1 |
-| 95446-01070 | Radgewichte Satz / Rad (**optional** rear-wheel weight kit) | 2 |
+| Part # | Item | Qty | Price (€) |
+|---|---|---|---|
+| 95447-01051 | Motor Radantrieb (rear drive motor) | 2 | ~75 |
+| 95446-01055 | Rad mit Noppen (knobbed rear wheel) | 2 | 11.00 |
+| 95447-01058 | Rad vorne komplett (front caster, complete) | 2 | 26.99 |
+| 99999-6000G | Kugellager 6000 geschlossen (sealed 6000 ball bearing) | 4 | 7.98 |
+| 95447-01064 | Fahrsensor (drive / motion sensor) | 1 | 29.99 |
+| 95447-01038 | Motor Mähwerk (mow motor) | 1 | 97.00 |
+| 95447-01086 | Li-Ion Akkupack 3 Ah / 28 V | 1 | 99.00 |
+| 95446-01070 | Radgewichte Satz / Rad (**optional** rear-wheel weight kit) | 2 | 14.95 |
 
 **Bearing upgrade:** the OEM front-caster bearings are steel-ring 6000
 types that corrode in wet grass. Replace with corrosion-proof polymer
