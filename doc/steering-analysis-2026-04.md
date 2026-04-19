@@ -22,23 +22,62 @@ Despite the ADR-004 fix currently deployed on the mowers, batman continues to ex
 
 Read top-to-bottom — sections depend on each other.
 
-### 1.1 Terminology — "stalled wheel"
+### 1.1 Terminology — "stalled wheel" vs. "slipping wheel"
 
-Throughout this document a **stalled wheel** means *the wheel is being commanded but is not rotating because the applied torque is insufficient to overcome resistance*. It does **not** mean "motor unpowered and coasting". Two sub-types matter, and they are physically distinct:
+Throughout this document a **stalled wheel** means *the wheel shaft is not rotating because the applied torque is insufficient to overcome resistance*. It does **not** mean "motor unpowered and coasting". A **slipping wheel** is the opposite: the shaft rotates (encoder happy) but the contact patch does not translate over the ground because lateral scrub or traction loss exceeds friction capacity.
 
-- **Dead-zone stall** — PWM is too low to overcome the motor's *own* static friction (cogging, brush stiction, gearbox drag). Happens even on blocks, with no external load. This is the dominant failure mode of the current ADR-004 regime: we command a tiny RPM setpoint, the PID outputs a small PWM, and the motor never breaks away.
-- **Load stall** — PWM is high enough to spin a free wheel, but *external* resistance (tall grass, root, slope, obstacle) exceeds the delivered torque. Targeted by the existing `MOTOR_OVERLOAD_CURRENT` / `sense()` logic.
+Three distinct sub-modes matter, and they are physically distinct:
 
-Both produce the same observable: `rpmSet > 0, rpmCurr ≈ 0`. They are distinguished by motor current:
+- **Dead-zone stall** — PWM is too low to overcome the motor's *own* static friction (cogging, brush stiction, gearbox drag). Happens even on blocks, with no external load. Low motor current.
+- **Load stall** — PWM is high enough to spin a free wheel, but *external* resistance (tall grass, root, slope, obstacle) exceeds the delivered torque. High motor current, near `MOTOR_OVERLOAD_CURRENT`.
+- **Traction slip** — shaft rotates as commanded, but the wheel loses grip and does not translate the chassis. Motor current is **low–normal** and encoder `rpmCurr ≈ rpmSet`. **The existing `sense()` one-wheel-turn detector cannot see this — the motor encoder is on the shaft, not on the ground.**
 
-| Symptom | Dead-zone stall | Load stall |
+The three produce overlapping symptoms:
+
+| Symptom | Dead-zone stall | Load stall | Traction slip |
+|---|---|---|---|
+| `rpmSet` | small (< 10) | any | any |
+| `rpmCurr` (encoder) | ≈ 0 | ≈ 0 | ≈ `rpmSet` |
+| Motor current `i` | **low** | **high** (near overload) | **low–normal** |
+| GPS-pose vs. predicted | Both drift | Both drift | **Prediction turns, GPS doesn't** |
+| Caught by `sense()` one-wheel logic | Yes | Yes | **No — invisible** |
+| Caught by ADR-004 fix | Partially | No | No |
+| Fix path | §5.1 / §5.2 (reshape kinematic request) | Overload recovery, slow-down | §5.6 (traction-aware turn-rate limit + GPS/IMU slip detection) |
+
+The STEER log line in §6.1 includes `iL, iR` (to separate stall types) and now also needs to expose `GPS heading rate` vs. `commanded ω` so traction slip becomes visible post-mortem (see §6.1 update).
+
+### 1.2 Is Alfred torque-limited or traction-limited? (unresolved)
+
+A major open question for this analysis. Two competing hypotheses:
+
+**H1 — torque-limited (dead-zone stall dominates)**
+The ADR-004 regime and §2.2 envelope derivation assume this. Inner wheel commanded below break-away PWM → doesn't rotate → mower pivots on outer wheel.
+
+**H2 — traction-limited (slip dominates)**
+Alfred has **rear-wheel drive with a nose-heavy chassis** (mow motor + front-mounted mow disc). If the CoG is roughly 60–70 % forward, each rear drive wheel carries only ~2.5–3 kg of normal force. At a friction coefficient of 0.6 on dry grass, that's ~15–18 N of available traction per wheel — which is close to the lateral scrub force during a tight turn. The front caster, bearing 10–11 kg, has large break-out friction and resists rotation; the mower tends to **scrub around its nose** rather than pivot about its centerline. Result: outer rear wheel spins freely (encoder is happy, motor current is moderate) while the robot barely turns.
+
+**Why the distinction matters for the fix:**
+
+- If H1: §5.1/§5.2 envelope fix is sufficient.
+- If H2: §5.1/§5.2 helps but is **not enough**. The robot would also need
+  - (a) A **turn-rate cap** that respects `|ω_max| = μ·g·N_rear / (m·L/2)` rather than only the motor dead-zone cap (see §5.6).
+  - (b) **Slip detection** comparing commanded ω against GPS/IMU-measured heading rate, to abort a turn when slip is detected.
+  - (c) Possibly a **mechanical rebalance** (rear ballast or battery relocation) that is out of scope for firmware.
+- Both fixes are compatible and complementary; if we implement both, we're robust to either mode.
+
+**What we know vs. what we need to verify:**
+
+| Fact | Status | Source |
 |---|---|---|
-| `rpmSet` | small (< 10) | any |
-| `rpmCurr` | ≈ 0 | ≈ 0 |
-| Motor current `i` | **low** | **high** (near overload) |
-| Fix path | §5.1 / §5.2 (reshape kinematic request) | overload recovery, slow-down, row spacing |
+| Drive wheels are at rear | Known | `FREEWHEEL_IS_AT_BACKSIDE = false` in config |
+| Mow disc mounted at front | Known | Mechanical drawing |
+| CoG position | **Unknown** | Q1 in §3.1 — needs scale measurement |
+| Motor current during a failed turn | **Unknown** | Needs STEER log (§6.1) |
+| GPS/IMU heading rate during a failed turn | **Unknown** | Needs STEER log extended with `omega_gps` |
+| Break-away PWM per wheel | **Unknown** | T1/T2 bench test (§6.3) |
+| Tyre friction coefficient on grass | **Unknown** | Hard to measure directly; inferred from slip events |
 
-The STEER log line in §6.1 includes `iL, iR` specifically so the two can be separated in post-mortem.
+**We cannot pick between H1 and H2 from static code analysis.** The debugging plan in §6 is now explicitly designed to discriminate them on the first instrumented run.
 
 ---
 
@@ -282,6 +321,64 @@ Only if §6 logs show wind-up > 3 s in practice.
 
 The current fix operates **inside the unicycle model** and clamps one wheel while lying to the controller about the other. The proposed fix operates **before the unicycle model**, reshaping the (v, ω) request so the model's output is physically realisable, and uses the motor-level clamp only as a safety net with controller feedback.
 
+### 5.6 Traction-aware turn-rate cap and slip detection (if H2 is confirmed)
+
+If the §1.2 debugging confirms H2 (traction-limited), the envelope in §5.1 needs a second constraint layered on top — the **friction envelope**:
+
+$$|\omega_{\mathrm{traction}}(v)| \le \frac{2\,\mu\,g\,N_{\mathrm{rear\,fraction}}}{L}$$
+
+where `N_rear_fraction` is the fraction of chassis weight on the drive wheels. For Alfred with nose-heavy CoG (estimate 35 % rear × 16 kg × 9.8 m/s² × 0.6 friction × 2 / 0.39 m ≈ **1.7 rad/s** gross cap), the hard limit is not far from the commands Stanley produces during tight turns.
+
+More interesting: the **effective** turn rate under slip is:
+
+$$\omega_{\mathrm{effective}} = \mathrm{min}(\omega_{\mathrm{dead\text{-}zone\ envelope}}, \omega_{\mathrm{traction\ envelope}})$$
+
+Implementation — extend the §5.1 block:
+
+```cpp
+#ifdef TRACTION_LIMIT_TURN_RATE
+const float w_traction = 2.0f * MU_GRASS * 9.81f * REAR_WEIGHT_FRACTION / (WHEEL_BASE_CM / 100.0f);
+float w_limit = fmin(w_envelope, w_traction);
+if (fabs(w) > w_limit) w = copysignf(w_limit, w);
+#endif
+```
+
+With config entries:
+
+```cpp
+#define TRACTION_LIMIT_TURN_RATE     1
+#define MU_GRASS                     0.6f   // conservative dry grass
+#define REAR_WEIGHT_FRACTION         0.35f  // measured — Q1
+```
+
+**Slip detection (online):** once per control cycle, compare commanded `ω` against measured heading rate from IMU gyroscope (already available, `imu.gyroZ`) or GPS heading differentiation:
+
+```cpp
+float omega_measured = imu.gyroZ;   // or (heading - lastHeading)/dt from GPS
+float slip_ratio = (fabs(angularSpeedSet) > 0.1f)
+                 ? fabs(angularSpeedSet - omega_measured) / fabs(angularSpeedSet)
+                 : 0.0f;
+if (slip_ratio > SLIP_THRESHOLD && slip_duration_ms > 500) {
+  // abort current tight turn, switch to rotate-in-place at lower rate
+  // or request replanning
+  CONSOLE.println("SLIP: traction lost during turn — aborting arc");
+  // fall-back: pivot-in-place at reduced rate until heading error < 10°
+}
+```
+
+This is the missing feedback loop: the motor encoder lies (it reports shaft rotation, not ground motion); IMU/GPS heading rate is the only honest signal during a slip event. **No slip-detection currently exists in Sunray.**
+
+### 5.7 Layering of the proposed fixes
+
+Three layers, each catching a different failure mode, in order of where they act:
+
+1. **§5.1 (controller envelope)** — request-shaping. Prevents commanding unrealisable (v, ω). Dead-zone aware.
+2. **§5.6 (traction envelope + slip detection)** — physics-aware clamp + online abort. Traction aware.
+3. **§5.2 (motor-level clamp with feedback)** — safety net if the above are bypassed or miscalibrated.
+4. **§5.3 (PID integrator bleed)** — wind-up protection during residual stalls.
+
+Phase 2 of the roll-out (§7) implements layers 1 and 3. Phase 2b (conditional on H2 confirmation) adds layer 2.
+
 ---
 
 ## 6. Debugging Plan
@@ -307,11 +404,24 @@ if (fabs(motorLeftRpmSet) + fabs(motorRightRpmSet) > 0.5f
   CONSOLE.print(" iL=");      CONSOLE.print(motorLeftSenseLP, 2);
   CONSOLE.print(" iR=");      CONSOLE.print(motorRightSenseLP, 2);
   CONSOLE.print(" lat=");     CONSOLE.print(stateEstimator.lateralError, 3);
+  CONSOLE.print(" wGps=");    CONSOLE.print(stateEstimator.angularSpeedMeasured, 3);
+  CONSOLE.print(" wImu=");    CONSOLE.print(imu.gyroZ, 3);
   CONSOLE.println();
 }
 ```
 
-Rationale: `v, w` = what was asked for; `rpmset` = unicycle translation; `rpm` = what wheels did; `pwm, i` = actuator effort. Stalls visible as `rpmset ≠ rpm` + `pwm saturating` + `i rising`.
+Rationale: `v, w` = what was asked for; `rpmset` = unicycle translation; `rpm` = what wheels did (encoder, shaft side); `pwm, i` = actuator effort; **`wGps, wImu` = what the chassis actually did over the ground**.
+
+Failure-mode discrimination from a single log line:
+
+| Mode | `rpmset` | `rpm` (enc) | `i` | `wImu` vs. `w` |
+|---|---|---|---|---|
+| Dead-zone stall | > 5 | ≈ 0 | low | `wImu < w` |
+| Load stall | any | ≈ 0 | **high** | `wImu < w` |
+| Traction slip | any | **≈ `rpmset`** | low–normal | **`wImu ≪ w`** |
+| Healthy turn | any | ≈ `rpmset` | normal | `wImu ≈ w` |
+
+This table is the primary diagnostic output of Phase 1 logging — it resolves §1.2 H1 vs. H2 directly.
 
 ### 6.2 Video recording — record on batman, note wall-clock start
 
