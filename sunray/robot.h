@@ -46,7 +46,11 @@
 #include "timetable.h"
 
 
-#define VER "Sunray,1.0.331-autoditac.1"
+#ifdef FIRMWARE_SHA
+  #define VER "Sunray,1.0.331-autoditac.1-alpha." FIRMWARE_SHA
+#else
+  #define VER "Sunray,1.0.331-autoditac.1"
+#endif
 
 // common types
 #include "types.h"

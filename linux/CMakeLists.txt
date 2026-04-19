@@ -80,6 +80,12 @@ endif()
 
 configure_file(${CONFIG_FILE} ${FIRMWARE_PATH}/config.h COPYONLY)
 
+# Alpha build: pass short commit SHA into firmware version string
+if (DEFINED FIRMWARE_SHA AND NOT FIRMWARE_SHA STREQUAL "")
+    message(STATUS "Alpha build: FIRMWARE_SHA=${FIRMWARE_SHA}")
+    add_definitions(-DFIRMWARE_SHA="${FIRMWARE_SHA}")
+endif()
+
 message("main file ${FIRMWARE_PATH}/sunray.ino")
 
 ## set_source_files_properties({sunray_c} PROPERTIES LANGUAGE C)

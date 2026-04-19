@@ -35,10 +35,15 @@ jobs:
       - name: Determine tags
         id: tags
         run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           TAGS="$REGISTRY/$IMAGE:${{ github.sha }}"
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
             TAGS="$TAGS,$REGISTRY/$IMAGE:$VERSION,$REGISTRY/$IMAGE:latest"
+            echo "firmware_sha=" >> "$GITHUB_OUTPUT"
+          else
+            TAGS="$TAGS,$REGISTRY/$IMAGE:alpha"
+            echo "firmware_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
@@ -49,5 +54,7 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            FIRMWARE_SHA=${{ steps.tags.outputs.firmware_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

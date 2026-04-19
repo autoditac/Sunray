@@ -17,9 +17,12 @@ COPY sunray/ sunray/
 COPY linux/ linux/
 COPY configs/ configs/
 
+ARG FIRMWARE_SHA=""
+
 RUN cd linux \
     && mkdir -p build && cd build \
-    && cmake -DCMAKE_BUILD_TYPE=Release -DCONFIG_FILE=/build/Sunray/configs/config.h .. \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DCONFIG_FILE=/build/Sunray/configs/config.h \
+             -DFIRMWARE_SHA="${FIRMWARE_SHA}" .. \
     && make -j$(nproc)
 
 # Build serial low_latency helper
