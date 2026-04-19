@@ -85,6 +85,12 @@ void MowOp::end(){
 }
 
 void MowOp::run(){
+    if (detectGeofenceViolation()){
+        CONSOLE.println("GEOFENCE: stopping — rover left perimeter or entered exclusion");
+        stateEstimator.stateSensor = SENS_GEOFENCE;
+        changeOp(errorOp);
+        return;
+    }
     if (!detectObstacle()){
         detectObstacleRotation();                              
     }        

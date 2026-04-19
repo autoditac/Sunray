@@ -534,6 +534,14 @@ void outputConfig(){
   CONSOLE.println(KIDNAP_DETECT);
   CONSOLE.print("KIDNAP_DETECT_ALLOWED_PATH_TOLERANCE: ");
   CONSOLE.println(KIDNAP_DETECT_ALLOWED_PATH_TOLERANCE);
+#if defined(GEOFENCE_ENFORCE)
+  CONSOLE.print("GEOFENCE_ENFORCE: ");
+  CONSOLE.println(GEOFENCE_ENFORCE);
+  CONSOLE.print("GEOFENCE_HYSTERESIS_SAMPLES: ");
+  CONSOLE.println(GEOFENCE_HYSTERESIS_SAMPLES);
+  CONSOLE.print("GEOFENCE_CHECK_INTERVAL_MS: ");
+  CONSOLE.println(GEOFENCE_CHECK_INTERVAL_MS);
+#endif
   CONSOLE.print("DOCKING_STATION: ");
   CONSOLE.println(DOCKING_STATION);
   CONSOLE.print("DOCK_IGNORE_GPS: ");
@@ -724,6 +732,60 @@ bool robotShouldBeInMotion(){
 // drive reverse if robot cannot move forward
 void triggerObstacle(){
   activeOp->onObstacle();
+}
+
+
+// Runtime geofence check: returns true if the rover's current position is
+// outside the perimeter polygon or inside any exclusion (no-go) polygon.
+// Uses a per-call hysteresis counter so brief GPS jitter does not trigger
+// a false stop.  Only active while stateLocalizationMode == LOC_GPS; skipped
+// during docking (wayMode == WAY_DOCK) where the path may legitimately
+// touch the perimeter edge.  Rate-limited by GEOFENCE_CHECK_INTERVAL_MS.
+bool detectGeofenceViolation(){
+#if defined(GEOFENCE_ENFORCE)
+  if (!GEOFENCE_ENFORCE) return false;
+  static unsigned long nextGeofenceCheckTime = 0;
+  static int geofenceOutsideSamples = 0;
+  if (millis() < nextGeofenceCheckTime) return false;
+  nextGeofenceCheckTime = millis() + GEOFENCE_CHECK_INTERVAL_MS;
+  if (stateEstimator.stateLocalizationMode != LOC_GPS) {
+    geofenceOutsideSamples = 0;
+    return false;
+  }
+  if (maps.wayMode == WAY_DOCK) {
+    geofenceOutsideSamples = 0;
+    return false;
+  }
+  if (maps.perimeterPoints.numPoints < 3) {
+    geofenceOutsideSamples = 0;
+    return false;
+  }
+  Point pt;
+  pt.setXY(stateEstimator.stateX, stateEstimator.stateY);
+  bool inside = maps.pointIsInsidePolygon(maps.perimeterPoints, pt);
+  if (inside) {
+    for (int i = 0; i < maps.exclusions.numPolygons; i++) {
+      if (maps.pointIsInsidePolygon(maps.exclusions.polygons[i], pt)) {
+        inside = false;
+        break;
+      }
+    }
+  }
+  if (!inside) {
+    geofenceOutsideSamples++;
+    if (geofenceOutsideSamples >= GEOFENCE_HYSTERESIS_SAMPLES) {
+      CONSOLE.print("GEOFENCE violation: rover outside perimeter or in exclusion at x=");
+      CONSOLE.print(stateEstimator.stateX);
+      CONSOLE.print(" y=");
+      CONSOLE.println(stateEstimator.stateY);
+      geofenceOutsideSamples = 0;
+      return true;
+    }
+  } else {
+    geofenceOutsideSamples = 0;
+  }
+#endif
+  return false;
 }
 
 
