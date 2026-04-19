@@ -205,7 +205,13 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    //     nose actually pivots.
    //
    #ifdef MIN_WHEEL_SPEED
-   if (!maps.isUndocking() && !maps.isDocking()) {
+   // Guard applies during undocking too: leaving the station with a
+   // reverse-pivot (v≈-0.1, w≈+0.5) puts the inner wheel well inside the
+   // dead zone (|rspeed| ≈ 0.01 m/s < MIN_WHEEL_SPEED), causing the outer
+   // wheel to spin freely while the inner one stalls — observed on batman
+   // on 2026-04-19 (one-wheel failure at undock).  Docking (approach to
+   // station) remains excluded so the contact alignment stays precise.
+   if (!maps.isDocking()) {
      float origL = lspeed;
      float origR = rspeed;
      bool adjusted = false;
