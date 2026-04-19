@@ -22,6 +22,24 @@ Despite the ADR-004 fix currently deployed on the mowers, batman continues to ex
 
 Read top-to-bottom — sections depend on each other.
 
+### 1.1 Terminology — "stalled wheel"
+
+Throughout this document a **stalled wheel** means *the wheel is being commanded but is not rotating because the applied torque is insufficient to overcome resistance*. It does **not** mean "motor unpowered and coasting". Two sub-types matter, and they are physically distinct:
+
+- **Dead-zone stall** — PWM is too low to overcome the motor's *own* static friction (cogging, brush stiction, gearbox drag). Happens even on blocks, with no external load. This is the dominant failure mode of the current ADR-004 regime: we command a tiny RPM setpoint, the PID outputs a small PWM, and the motor never breaks away.
+- **Load stall** — PWM is high enough to spin a free wheel, but *external* resistance (tall grass, root, slope, obstacle) exceeds the delivered torque. Targeted by the existing `MOTOR_OVERLOAD_CURRENT` / `sense()` logic.
+
+Both produce the same observable: `rpmSet > 0, rpmCurr ≈ 0`. They are distinguished by motor current:
+
+| Symptom | Dead-zone stall | Load stall |
+|---|---|---|
+| `rpmSet` | small (< 10) | any |
+| `rpmCurr` | ≈ 0 | ≈ 0 |
+| Motor current `i` | **low** | **high** (near overload) |
+| Fix path | §5.1 / §5.2 (reshape kinematic request) | overload recovery, slow-down, row spacing |
+
+The STEER log line in §6.1 includes `iL, iR` specifically so the two can be separated in post-mortem.
+
 ---
 
 ## 2. The Steering Control Pipeline
