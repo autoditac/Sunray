@@ -223,7 +223,7 @@ Revised H2 assessment: **likely secondary to H1** on dry grass. H2 could still d
 >
 > **Q2.** ~~Front support type~~ **Answered 2026-04-19 from Güde GRR 240.1 parts list: two swivel casters (Schwenkrollen), each supported by 2 × sealed 6000-series ball bearings (parts 58 + 60). Horizontal rolling axis + vertical swivel axis both on ball bearings → low break-out torque expected. Verify by hand: lift the front of the mower and rotate each caster yoke by its tyre; it should spin freely without detectable resistance.**
 >
-> **Q3.** Tyre material: rubber lug, smooth plastic, foam?
+> **Q3.** ~~Tyre material~~ **Answered 2026-04-19 from parts list (part 95446-01055 "Rad mit Noppen"): knobbed/lugged rubber on the rear drive wheels. Front casters (part 95447-01058) are smooth plastic rollers typical for indoor-castor-style wheels. This gives high μ at the drive and low μ at the front — favourable for H1 interpretation.**
 >
 > **Q4.** **Break-away PWM per wheel on level concrete**: step `AT+M,<pwm>,0,0` and `AT+M,0,<pwm>,0` from 0 upward; note the PWM at first visible motion.
 >
