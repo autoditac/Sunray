@@ -541,6 +541,8 @@ void outputConfig(){
   CONSOLE.println(GEOFENCE_HYSTERESIS_SAMPLES);
   CONSOLE.print("GEOFENCE_CHECK_INTERVAL_MS: ");
   CONSOLE.println(GEOFENCE_CHECK_INTERVAL_MS);
+  CONSOLE.print("GEOFENCE_TOLERANCE_M: ");
+  CONSOLE.println(GEOFENCE_TOLERANCE_M);
 #endif
   CONSOLE.print("DOCKING_STATION: ");
   CONSOLE.println(DOCKING_STATION);
@@ -772,14 +774,45 @@ bool detectGeofenceViolation(){
     }
   }
   if (!inside) {
-    geofenceOutsideSamples++;
-    if (geofenceOutsideSamples >= GEOFENCE_HYSTERESIS_SAMPLES) {
-      CONSOLE.print("GEOFENCE violation: rover outside perimeter or in exclusion at x=");
-      CONSOLE.print(stateEstimator.stateX);
-      CONSOLE.print(" y=");
-      CONSOLE.println(stateEstimator.stateY);
+    // Compute distance to nearest edge of the polygon we violated.  If we are
+    // within GEOFENCE_TOLERANCE_M of an edge, treat as inside: this absorbs
+    // RTK GPS jitter while the rover tracks the outermost (perimeter) mow
+    // lane without losing catastrophic runaway detection.
+    float minDist = 1e9;
+    Polygon *viol = NULL;
+    if (!maps.pointIsInsidePolygon(maps.perimeterPoints, pt)) {
+      viol = &maps.perimeterPoints;
+    } else {
+      for (int i = 0; i < maps.exclusions.numPolygons; i++) {
+        if (maps.pointIsInsidePolygon(maps.exclusions.polygons[i], pt)) {
+          viol = &maps.exclusions.polygons[i];
+          break;
+        }
+      }
+    }
+    if (viol != NULL && viol->numPoints >= 2) {
+      for (int i = 0; i < viol->numPoints; i++) {
+        int j = (i + 1) % viol->numPoints;
+        float d = distanceLine(pt.x(), pt.y(),
+                               viol->points[i].x(), viol->points[i].y(),
+                               viol->points[j].x(), viol->points[j].y());
+        if (d < minDist) minDist = d;
+      }
+    }
+    if (minDist <= GEOFENCE_TOLERANCE_M) {
       geofenceOutsideSamples = 0;
-      return true;
+    } else {
+      geofenceOutsideSamples++;
+      if (geofenceOutsideSamples >= GEOFENCE_HYSTERESIS_SAMPLES) {
+        CONSOLE.print("GEOFENCE violation: rover outside perimeter or in exclusion at x=");
+        CONSOLE.print(stateEstimator.stateX);
+        CONSOLE.print(" y=");
+        CONSOLE.print(stateEstimator.stateY);
+        CONSOLE.print(" edgeDist=");
+        CONSOLE.println(minDist);
+        geofenceOutsideSamples = 0;
+        return true;
+      }
     }
   } else {
     geofenceOutsideSamples = 0;
