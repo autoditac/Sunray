@@ -430,9 +430,13 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // KIDNAP_DETECT (which only watches distance-to-planned-path).  A small
 // hysteresis suppresses GPS jitter; only active while localization is
 // LOC_GPS and not during docking maneuvers (wayMode == WAY_DOCK).
+// GEOFENCE_TOLERANCE_M allows a small GPS jitter margin when the rover is
+// tracking the perimeter edge (outermost mow lane) so RTK jitter does not
+// trigger false violations while still catching catastrophic runaway.
 #define GEOFENCE_ENFORCE true
 #define GEOFENCE_HYSTERESIS_SAMPLES 3  // consecutive out-of-bounds samples required to trigger
 #define GEOFENCE_CHECK_INTERVAL_MS 200  // minimum interval between geofence checks (ms)
+#define GEOFENCE_TOLERANCE_M 1.0  // distance (m) outside perimeter / inside exclusion tolerated (GPS jitter margin while mowing perimeter edge)
 
 // ------ docking --------------------------------------
 // is a docking station available?
