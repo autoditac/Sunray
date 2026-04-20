@@ -87,7 +87,7 @@ When the inner wheel would be commanded slowly forward during a turn, drive it b
 - BLE (`BLE_NAME` commented out)
 - Lift sensor (`ENABLE_LIFT_DETECTION` commented out)
 - Buzzer (`BUZZER_ENABLE` commented out)
-- NTRIP (`ENABLE_NTRIP` commented out)
+- NTRIP (`ENABLE_NTRIP` commented out) — **not used in this fleet**. RTK corrections are delivered to the u-blox F9P through an external channel (not via Sunray). The Sunray Linux NTRIP client stays disabled; do not re-enable it or add NTRIP credentials. Intermittent `sol=0/1/2` (no fix / dead-reckoning / float) and `GpsRebootRecovery` events are base-station / radio / antenna issues, not NTRIP issues.
 - Rain sensor (`RAIN_ENABLE false`)
 
 ## Docker Build
