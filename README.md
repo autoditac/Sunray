@@ -66,6 +66,22 @@ Sunray/Alfred project replaces the OEM mainboard with a Raspberry Pi 4B +
 STM32 co-processor but keeps the **chassis, drive motors, mow motor, and
 wheels unchanged**.
 
+### White label variants
+
+This platform is based on a **commodity Chinese OEM** manufactured by **Ningbo NGP Industry Co., Ltd.** Multiple retailers sell identical or near-identical variants under different brands:
+
+| Brand | Model examples | Notes |
+|---|---|---|
+| **Güde** | GRR 240.1 | German distributor; source for replacement parts |
+| **Fuxtec** | FX-RB224 | German / EU distributor; same chassis as Güde |
+| **Redback** | RM24A, RM24A-10D, RM24A-15 | **NGP house brand** — uses factory model nomenclature; markets include Australia and others |
+| **MowRo** | RM24 | **US market** — NGP branded entry for North America |
+
+The Sunray/Alfred project is tested on the **Güde GRR 240.1** and **Fuxtec FX-RB224** (which are mechanically identical). The same firmware, hardware integration, and control logic should work on any variant with the same drive motors (RM24 gear motors) and chassis geometry — including Redback (which uses NGP's factory model numbers) and MowRo (US market).
+
+**Sourcing components:** For specialized parts such as mainboards or wiring harnesses that are unavailable in Germany, search for the original OEM designations **"NGP RM24"** or **"Redback RM24"**. These searches often uncover direct importers and international suppliers who stock components for the NGP platform.
+
+
 | Item | Value |
 |---|---|
 | Base chassis | **Güde GRR 240.1** (part no. 95447-01058, also sold as **Fuxtec RB-224**) |

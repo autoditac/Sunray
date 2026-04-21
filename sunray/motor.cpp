@@ -75,6 +75,9 @@ void Motor::begin() {
   
   odometryError = false;  
   
+  motorLeftStallStartTime = 0;
+  motorRightStallStartTime = 0;
+
   motorLeftSense = 0;
   motorRightSense = 0;
   motorMowSense = 0;  
@@ -426,7 +429,7 @@ void Motor::run() {
   // if there is some error (odometry, too low current, rpm fault), try a recovery 
   if (!recoverMotorFault) {
     bool someFault = ( (checkFault()) || (checkCurrentTooHighError()) || (checkMowRpmFault()) 
-                         || (checkOdometryError()) || (checkCurrentTooLowError()) );
+                         || (checkOdometryError()) || (checkCurrentTooLowError()) || (checkMotorStall()) );
     if (someFault){
       stopImmediately(true);
       recoverMotorFault = true;
@@ -677,6 +680,69 @@ bool Motor::checkOdometryError() {
       return true;        
     }
   }
+  return false;
+}
+
+
+// Per-wheel stall detection (Alfred fork).
+// Trips when a drive wheel is commanded to drive (|pwm| >= STALL_PWM_THRESHOLD)
+// but barely rotates (|rpm| < STALL_RPM_THRESHOLD) while drawing current
+// (|sense| >= STALL_CURRENT_THRESHOLD, rules out mere disconnection) for
+// STALL_DURATION_MS continuously.  Complements checkOdometryError() which
+// is too slow / too strict (PWM > 100, rpmLP < 0.001) for Alfred's weight
+// distribution where a blocked wheel stalls at moderate PWM.
+bool Motor::checkMotorStall() {
+#ifdef ENABLE_MOTOR_STALL_DETECTION
+  unsigned long now = millis();
+
+  // left wheel
+  bool leftCandidate = (abs(motorLeftPWMCurr) >= STALL_PWM_THRESHOLD)
+                    && (fabs(motorLeftRpmCurr) < STALL_RPM_THRESHOLD)
+                    && (fabs(motorLeftSense)   >= STALL_CURRENT_THRESHOLD);
+  if (leftCandidate) {
+    if (motorLeftStallStartTime == 0) motorLeftStallStartTime = now;
+    if (now - motorLeftStallStartTime >= STALL_DURATION_MS) {
+      CONSOLE.print("ERROR: motor stall detected: wheel=L pwm=");
+      CONSOLE.print(motorLeftPWMCurr);
+      CONSOLE.print(" rpm=");
+      CONSOLE.print(motorLeftRpmCurr, 2);
+      CONSOLE.print(" current=");
+      CONSOLE.print(motorLeftSense, 2);
+      CONSOLE.print("A duration=");
+      CONSOLE.print((unsigned long)(now - motorLeftStallStartTime));
+      CONSOLE.println("ms");
+      motorLeftStallStartTime = 0;
+      motorRightStallStartTime = 0;
+      return true;
+    }
+  } else {
+    motorLeftStallStartTime = 0;
+  }
+
+  // right wheel
+  bool rightCandidate = (abs(motorRightPWMCurr) >= STALL_PWM_THRESHOLD)
+                     && (fabs(motorRightRpmCurr) < STALL_RPM_THRESHOLD)
+                     && (fabs(motorRightSense)   >= STALL_CURRENT_THRESHOLD);
+  if (rightCandidate) {
+    if (motorRightStallStartTime == 0) motorRightStallStartTime = now;
+    if (now - motorRightStallStartTime >= STALL_DURATION_MS) {
+      CONSOLE.print("ERROR: motor stall detected: wheel=R pwm=");
+      CONSOLE.print(motorRightPWMCurr);
+      CONSOLE.print(" rpm=");
+      CONSOLE.print(motorRightRpmCurr, 2);
+      CONSOLE.print(" current=");
+      CONSOLE.print(motorRightSense, 2);
+      CONSOLE.print("A duration=");
+      CONSOLE.print((unsigned long)(now - motorRightStallStartTime));
+      CONSOLE.println("ms");
+      motorLeftStallStartTime = 0;
+      motorRightStallStartTime = 0;
+      return true;
+    }
+  } else {
+    motorRightStallStartTime = 0;
+  }
+#endif
   return false;
 }
 
