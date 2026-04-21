@@ -100,6 +100,9 @@ class Motor {
     unsigned long nextRecoverMotorFaultTime;
     int motorLeftTicksZero;    
     int motorRightTicksZero;    
+    // per-wheel stall detection: 0 = no candidate window open, else millis() when conditions first held
+    unsigned long motorLeftStallStartTime;
+    unsigned long motorRightStallStartTime;
     bool setLinearAngularSpeedTimeoutActive;
     unsigned long setLinearAngularSpeedTimeout;    
     void speedPWM ( int pwmLeft, int pwmRight, int pwmMow );
@@ -107,6 +110,7 @@ class Motor {
     bool checkFault();
     void checkOverload();
     bool checkOdometryError();
+    bool checkMotorStall();
     bool checkMowRpmFault();
     bool checkCurrentTooHighError();    
     bool checkCurrentTooLowError();

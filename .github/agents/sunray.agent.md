@@ -3,7 +3,7 @@ name: Sunray
 description: >-
   Unified entry point for Sunray Alfred mower firmware — build, configure,
   test, deploy, and document. Delegates to specialist subagents for focused work.
-tools: ['read', 'search', 'agent', 'todo']
+tools: [execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/createAndRunTask, execute/runInTerminal, read, agent, search, azure-mcp/search, todo]
 agents: ['firmware-build', 'docker', 'pr-manager', 'docs', 'ansible-plan', 'ansible-build', 'ansible-test', 'ansible-review']
 ---
 
