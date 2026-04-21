@@ -160,6 +160,18 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // heavy-nose chassis like Alfred where one slow wheel can't turn alone.
 #define MIN_WHEEL_SPEED  0.05  // m/s — wheels below this can't move Alfred's nose
 
+// Per-wheel stall detection (Alfred fork).  Raises a motor fault when a
+// drive wheel is commanded (PWM above threshold) but is not rotating
+// (|rpm| near zero) while drawing current (motor loaded, not just
+// disconnected) for STALL_DURATION_MS continuously.  Complements
+// ENABLE_ODOMETRY_ERROR_DETECTION with faster response and current
+// confirmation (rules out slipping).
+#define ENABLE_MOTOR_STALL_DETECTION  1
+#define STALL_PWM_THRESHOLD       20    // |pwm| >= this means motor is commanded to drive
+#define STALL_RPM_THRESHOLD       2.0f  // |rpm| < this means wheel barely rotating
+#define STALL_CURRENT_THRESHOLD   0.4f  // |current| >= this means motor is loaded (amps)
+#define STALL_DURATION_MS         2000  // all conditions must hold this long to trip
+
 // Pivot creep: small forward linear speed added while the robot is
 // pivoting in place to align the heading (!angleToTargetFits in
 // LineTracker).  Prevents the caster from dragging sideways on grass
