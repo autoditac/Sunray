@@ -458,7 +458,11 @@ void Motor::run() {
         CONSOLE.println(recoverMotorFaultCounter);
         motorDriver.resetMotorFaults();
         recoverMotorFault = false;  
-        if (recoverMotorFaultCounter >= 10){ // too many successive motor faults
+        // issue #22: during dock, a stuck wheel should escalate within ~20s not 60s
+        // so DockOp::onMotorError can attempt retry-dock before the battery wastes
+        // more current on a stalled motor.
+        int faultThreshold = (stateEstimator.stateOp == OP_DOCK) ? 3 : 10;
+        if (recoverMotorFaultCounter >= faultThreshold){ // too many successive motor faults
           //stopImmediately();
           CONSOLE.println("ERROR: motor recovery failed");
           recoverMotorFaultCounter = 0;
