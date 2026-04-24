@@ -208,13 +208,22 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    //     nose actually pivots.
    //
    #ifdef MIN_WHEEL_SPEED
-   // Guard applies during undocking too: leaving the station with a
-   // reverse-pivot (v≈-0.1, w≈+0.5) puts the inner wheel well inside the
-   // dead zone (|rspeed| ≈ 0.01 m/s < MIN_WHEEL_SPEED), causing the outer
-   // wheel to spin freely while the inner one stalls — observed on batman
-   // on 2026-04-19 (one-wheel failure at undock).  Docking (approach to
-   // station) remains excluded so the contact alignment stays precise.
-   if (!maps.isDocking()) {
+   // Docking (approach to station) is excluded so the contact alignment
+   // stays precise.
+   //
+   // Undocking is ALSO excluded — see issue autoditac/Sunray#20
+   // (2026-04-25, batman).  During reverse undock (v≈-0.1, w≈0.58..0.64)
+   // the geometry puts |rspeed| ≈ 0.004..0.015 m/s, straddling the
+   // NEAR_ZERO_EPS=0.015 boundary.  PID noise (~±0.005 m/s) makes the
+   // sign-decision branch flip every control cycle, alternating rpmRset
+   // between ±4.7 RPM at ~10 Hz.  The MS4931 driver cannot reverse
+   // direction that fast, so the right wheel jitters in place and the
+   // mower stalls leaving the dock.  Upstream (no clamp at all) handles
+   // this maneuver correctly, so disabling the clamp during undock is
+   // safe.  Background on why the clamp exists at all and why we cannot
+   // simply remove it for normal mowing: see note
+   // 2026-04-19-rwheel-stall-min-wheel-speed-clamp.md.
+   if (!maps.isDocking() && !maps.isUndocking()) {
      float origL = lspeed;
      float origR = rspeed;
      bool adjusted = false;
