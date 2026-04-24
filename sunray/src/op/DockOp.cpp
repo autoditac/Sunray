@@ -10,6 +10,7 @@
 #include "../../LineTracker.h"
 #include "../../Stats.h"
 #include "../../map.h"
+#include "../../events.h"
 
 DockOp::DockOp(){
   lastMapRoutingFailed = false;
@@ -170,6 +171,35 @@ void DockOp::onObstacle(){
   battery.setIsDocked(true); // Test me   
   changeOp(chargeOp);
 }*/
+
+
+void DockOp::onMotorError(){
+    // issue #22: route motor stalls during dock approach into the same retry-dock /
+    // escape-reverse path used by onObstacle, so a stuck wheel doesn't sit drawing
+    // current indefinitely.
+    if (motor.motorError){
+        motor.motorError = false; // reset motor error flag (so it doesn't refire next loop)
+        stateEstimator.motorErrorCounter++;
+        CONSOLE.print("DockOp::onMotorError motorErrorCounter=");
+        CONSOLE.println(stateEstimator.motorErrorCounter);
+        if (battery.chargerConnected()) {
+            CONSOLE.println("DockOp::onMotorError - ignoring, because charger connected");
+            return;
+        }
+        if (stateEstimator.motorErrorCounter < FAULT_MAX_SUCCESSIVE_ALLOWED_COUNT){
+            if (maps.retryDocking(stateEstimator.stateX, stateEstimator.stateY)) {
+                Logger.event(EVT_ERROR_MOTOR_ERROR);
+                changeOp(escapeReverseOp, true);
+                return;
+            }
+        }
+        CONSOLE.println("DockOp::onMotorError - giving up");
+        stateEstimator.motorErrorCounter = 0;
+        stateEstimator.stateSensor = SENS_MOTOR_ERROR;
+        Logger.event(EVT_ERROR_MOTOR_ERROR_GIVEUP);
+        changeOp(errorOp);
+    }
+}
 
 
 void DockOp::onNoFurtherWaypoints(){
