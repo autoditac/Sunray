@@ -250,18 +250,48 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
        // geometric sign so legitimately negative inner speeds (|rspeed|
        // approx 9 RPM < MIN, clearly non-noise) are not clobbered — that
        // was the bug in commit 98a24ab reverted in ba4e4f3.
-       const float NEAR_ZERO_EPS = 0.015f;  // ~5x observed PID-noise on rspeed
+       // Hysteresis on the clamped sign decision (issue #24).
+       //
+       // PR #21 picked the clamp sign per cycle from the current geometric
+       // inner-wheel speed (linearSign deep in the dead zone, sign(speed)
+       // outside).  That branch boundary at NEAR_ZERO_EPS is itself a flip
+       // surface: during op=Mow tight Stanley turns (v=+0.1, w around -0.6),
+       // PID jitter on w drifts rspeed across +/- NEAR_ZERO_EPS every cycle,
+       // so the clamp output alternates +MIN_WHEEL_SPEED, -MIN_WHEEL_SPEED.
+       // Observed on batman 2026-04-25 ~19:41: rpmRset oscillating +/-4.7,
+       // pwmR sign-flipping every few ticks, iR climbing to ~1.08 A while
+       // rpmR sat near zero - silent spin-lock until the operator stopped.
+       //
+       // Fix: latch the last sign per wheel.  Only flip the latched sign
+       // when the unclamped geometric speed clearly exceeds zero in the
+       // opposite direction by SIGN_FLIP_HYSTERESIS.  The hysteresis band
+       // is wider than NEAR_ZERO_EPS (kills PID jitter) but still well
+       // below MIN_WHEEL_SPEED, so a legitimate inner-wheel reversal
+       // during a sharp turn (|rspeed| ~ 0.075 m/s) flips on the next
+       // cycle as before.
+       const float NEAR_ZERO_EPS = 0.015f;        // ~5x observed PID-noise on rspeed
+       const float SIGN_FLIP_HYSTERESIS = 0.040f; // < MIN_WHEEL_SPEED (0.050)
        const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
+       static float lastLClampSign = 0.0f;
+       static float lastRClampSign = 0.0f;
+       auto trackSign = [&](float v, float &latched) {
+         if (latched == 0.0f) latched = linearSign;
+         if (fabs(v) >= SIGN_FLIP_HYSTERESIS) {
+           latched = (v < 0) ? -1.0f : 1.0f;
+         }
+         // Inside the hysteresis band: keep the latched sign (anti-jitter).
+       };
+       // Always track, even when no clamp fires this cycle, so the latched
+       // sign reflects reality whenever the next clamp engagement happens.
+       trackSign(lspeed, lastLClampSign);
+       trackSign(rspeed, lastRClampSign);
+       (void)NEAR_ZERO_EPS;  // retained for documentation; sign now uses hysteresis
        if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
-         float sign = (fabs(lspeed) < NEAR_ZERO_EPS) ? linearSign
-                                                     : ((lspeed < 0) ? -1.0f : 1.0f);
-         lspeed = sign * MIN_WHEEL_SPEED;
+         lspeed = lastLClampSign * MIN_WHEEL_SPEED;
          adjusted = true;
        }
        if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
-         float sign = (fabs(rspeed) < NEAR_ZERO_EPS) ? linearSign
-                                                     : ((rspeed < 0) ? -1.0f : 1.0f);
-         rspeed = sign * MIN_WHEEL_SPEED;
+         rspeed = lastRClampSign * MIN_WHEEL_SPEED;
          adjusted = true;
        }
      } else {
