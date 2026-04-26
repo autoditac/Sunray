@@ -1,9 +1,16 @@
 name: Build Sunray Docker Images
 
+# Release streams:
+#   alpha          — feature/* branches  → :alpha, :feature-<name>, :sha-<sha>
+#   beta           — main branch         → :beta, :sha-<sha>
+#   release        — v* tags             → :<version>, :latest, :sha-<sha>
+#   upstream-alpha — upstream-alpha-* tags → :upstream-alpha, :upstream-alpha-<tag>, :sha-<sha>
+#   upstream-release — upstream-v* tags  → :upstream-release, :upstream-<version>, :sha-<sha>
+
 on:
   push:
-    branches: [main]
-    tags: ['*']
+    branches: [main, 'feature/**']
+    tags: ['v*', 'upstream-*']
     paths-ignore:
       - '*.md'
       - 'doc/**'
@@ -37,20 +44,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine tags
-        id: tags
+      - name: Determine release stream and tags
+        id: release
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          TAGS="$REGISTRY/$IMAGE:${{ github.sha }}"
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          TAG="${GITHUB_REF#refs/tags/}"
+          TAGS="$REGISTRY/$IMAGE:sha-$SHORT_SHA"
+          STREAM=""
+          FIRMWARE_SHA=""
+
+          if [[ "$GITHUB_REF" == refs/heads/feature/* ]]; then
+            FEATURE_NAME="${BRANCH#feature/}"
+            STREAM="alpha"
+            TAGS="$TAGS,$REGISTRY/$IMAGE:alpha,$REGISTRY/$IMAGE:feature-$FEATURE_NAME"
+            FIRMWARE_SHA="$SHORT_SHA"
+          elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            STREAM="beta"
+            TAGS="$TAGS,$REGISTRY/$IMAGE:beta"
+            FIRMWARE_SHA="$SHORT_SHA"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${TAG#v}"
+            STREAM="release"
             TAGS="$TAGS,$REGISTRY/$IMAGE:$VERSION,$REGISTRY/$IMAGE:latest"
-            echo "firmware_sha=" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/tags/upstream-alpha* ]]; then
+            STREAM="upstream-alpha"
+            TAGS="$TAGS,$REGISTRY/$IMAGE:upstream-alpha,$REGISTRY/$IMAGE:upstream-$TAG"
+          elif [[ "$GITHUB_REF" == refs/tags/upstream-v* ]]; then
+            VERSION="${TAG#upstream-v}"
+            STREAM="upstream-release"
+            TAGS="$TAGS,$REGISTRY/$IMAGE:upstream-release,$REGISTRY/$IMAGE:upstream-$VERSION"
           else
-            TAGS="$TAGS,$REGISTRY/$IMAGE:alpha"
-            echo "firmware_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+            echo "❌ Unrecognized ref: $GITHUB_REF" >&2
+            exit 1
           fi
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+          echo "stream=$STREAM"      >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS"          >> "$GITHUB_OUTPUT"
+          echo "firmware_sha=$FIRMWARE_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -58,8 +89,13 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.release.outputs.tags }}
           build-args: |
-            FIRMWARE_SHA=${{ steps.tags.outputs.firmware_sha }}
+            FIRMWARE_SHA=${{ steps.release.outputs.firmware_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build summary
+        run: |
+          echo "Stream : ${{ steps.release.outputs.stream }}"
+          echo "Tags   : ${{ steps.release.outputs.tags }}"

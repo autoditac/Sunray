@@ -32,22 +32,34 @@ You are the main agent for the Sunray Alfred mower firmware project. You coordin
 ## Project context
 
 - **Repo**: [`autoditac/Sunray`](https://github.com/autoditac/Sunray) — GitHub fork of Ardumower/Sunray (aarch64 Linux)
-- **Mowers**: robin (production, `:latest`), batman (guinea pig, `:alpha`)
+- **Mowers**: batman (beta, `:beta`), robin (production, `:latest`)
 - **Build**: GitHub Actions CI only — **never build locally** on workstation or mower
-- **CI**: GitHub Actions → ghcr.io — `:alpha` on every push to main, `:latest` on tag push
+- **Release streams**: `feature/*` → `:alpha` | `main` → `:beta` (batman) | `v*` tag → `:latest` (robin)
 - **Upstream**: Ardumower/Sunray (remote `upstream`)
 
 ## Development workflow
 
-1. **One feature/fix per PR** — each merged PR produces an individual `:alpha` build
-2. batman auto-updates to `:alpha` → test and verify logs on batman
-3. Once validated, create a git tag to promote to `:latest` for all mowers
+1. **One feature/fix per PR** — each merged PR produces an individual `:beta` build
+2. batman auto-updates to `:beta` → test and verify logs on batman
+3. Once validated, push a `vX.Y.Z` tag to promote to `:latest` for robin and all production mowers
 4. **Never** combine unrelated changes — keep changesets isolated for impact assessment
 
 ## How to work
 
 1. Read the user's request and determine which specialist agent(s) to involve
 2. For cross-cutting tasks, break them down and delegate sequentially
-3. Always read relevant source files before making changes
+3. Always read relevant source files **before** delegating — gather file contents first
 4. When in doubt, check `configs/config.h` for current settings
 5. Prefer delegation when the task clearly matches a specialist agent's role
+
+## Delegating to subagents — CRITICAL
+
+Subagents are **stateless** — they have no access to this conversation's history.
+When calling a subagent, you **must** include all required context directly in the prompt:
+
+- The exact file content or code to write (do NOT say "use the content from above")
+- The exact file path(s) to edit
+- All variable values, image tags, and settings needed to complete the task
+
+Never send a subagent with a reference like "implement the change we discussed" — paste the actual content.
+Failure to do this will cause the subagent to ask for information it cannot retrieve.
