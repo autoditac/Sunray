@@ -10,10 +10,11 @@ name: Build Sunray Docker Images
 on:
   push:
     branches: [main, 'feature/**']
-    tags: ['v*', 'upstream-*']
+    tags: ['v*', 'upstream-alpha-*', 'upstream-v*']
     paths-ignore:
       - '*.md'
       - 'doc/**'
+      - 'docs/**'
       - '.github/instructions/**'
       - '.github/skills/**'
   workflow_dispatch:
@@ -56,8 +57,13 @@ jobs:
 
           if [[ "$GITHUB_REF" == refs/heads/feature/* ]]; then
             FEATURE_NAME="${BRANCH#feature/}"
+            SANITIZED_FEATURE_NAME=$(printf '%s' "$FEATURE_NAME" | sed 's|/|-|g; s|[^A-Za-z0-9_.-]|-|g; s|^[.-]*||; s|[.-]*$||')
+            if [[ -z "$SANITIZED_FEATURE_NAME" ]]; then
+              echo "❌ Feature branch name '$BRANCH' does not produce a valid Docker tag suffix" >&2
+              exit 1
+            fi
             STREAM="alpha"
-            TAGS="$TAGS,$REGISTRY/$IMAGE:alpha,$REGISTRY/$IMAGE:feature-$FEATURE_NAME"
+            TAGS="$TAGS,$REGISTRY/$IMAGE:alpha,$REGISTRY/$IMAGE:feature-$SANITIZED_FEATURE_NAME"
             FIRMWARE_SHA="$SHORT_SHA"
           elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
             STREAM="beta"
@@ -67,9 +73,10 @@ jobs:
             VERSION="${TAG#v}"
             STREAM="release"
             TAGS="$TAGS,$REGISTRY/$IMAGE:$VERSION,$REGISTRY/$IMAGE:latest"
-          elif [[ "$GITHUB_REF" == refs/tags/upstream-alpha* ]]; then
+          elif [[ "$GITHUB_REF" == refs/tags/upstream-alpha-* ]]; then
+            ALPHA_SUFFIX="${TAG#upstream-alpha-}"
             STREAM="upstream-alpha"
-            TAGS="$TAGS,$REGISTRY/$IMAGE:upstream-alpha,$REGISTRY/$IMAGE:upstream-$TAG"
+            TAGS="$TAGS,$REGISTRY/$IMAGE:upstream-alpha,$REGISTRY/$IMAGE:upstream-alpha-$ALPHA_SUFFIX"
           elif [[ "$GITHUB_REF" == refs/tags/upstream-v* ]]; then
             VERSION="${TAG#upstream-v}"
             STREAM="upstream-release"
