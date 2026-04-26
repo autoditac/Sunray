@@ -16,16 +16,21 @@ Build and modify the Sunray firmware for Alfred mowers running on RPi 4B (aarch6
 
 **Do NOT build firmware on the workstation or on the mower.** All builds go through GitHub Actions CI which cross-compiles for arm64 via QEMU and pushes to `ghcr.io`. To verify a change compiles, push to a PR branch and check the CI build status.
 
-### Release channels
+### Release streams (5-stream model)
 
-| Channel | Tag | Trigger | Target mowers |
+| Stream | Tag(s) | Trigger | Mowers |
 |---|---|---|---|
-| **alpha** | `:alpha` | Every push to `main` (merged PR) | batman (guinea pig) |
-| **release** | `:latest` + `:vX.Y.Z` | Git tag push (`vX.Y.Z`) | All mowers |
+| **alpha** | `:alpha`, `:feature-<name>` | Push to `feature/*` | Dev mowers |
+| **beta** | `:beta` | Push to `main` (merged PR) | batman |
+| **release** | `:latest`, `:<version>` | `v*` tag push | Production (robin) |
+| **upstream-alpha** | `:upstream-alpha` | `upstream-alpha-*` tag | Manual |
+| **upstream-release** | `:upstream-release`, `:upstream-<version>` | `upstream-v*` tag | Manual |
 
-- **batman** is the test mower — receives every merged changeset via `:alpha`
-- Each feature/fix should be a **separate PR** so each merge produces an individual alpha build
-- Alpha firmware version includes the short SHA: `Sunray,1.0.331-autoditac.1-alpha.abc1234`
+- **batman** runs `:beta` — receives every merged changeset automatically
+- **robin** runs `:latest` — only updates on tagged releases
+- Feature branches build `:alpha` + `:feature-<branch>` for targeted testing
+- Each feature/fix should be a **separate PR** so each merge produces an individual beta build
+- Beta firmware version includes the short SHA: `Sunray,1.0.331-autoditac.1-beta.abc1234`
 - Release firmware version is clean: `Sunray,1.0.331-autoditac.1`
 
 ### Cross-compile via Docker (CI only)

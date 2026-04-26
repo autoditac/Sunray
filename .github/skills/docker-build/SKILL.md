@@ -35,27 +35,32 @@ docker buildx build --platform linux/arm64 -t sunray --load .
 ## GitHub Actions CI
 
 The workflow at `.github/workflows/build.yml`:
-- Triggers on push to `main` and on tag pushes
+- Triggers on push to `main`, `feature/**` branches, and on tag pushes (`v*`, `upstream-*`)
 - Builds a single image: `sunray`
 - Uses QEMU for arm64 emulation
-- Push to `main` (merged PR): tags `:sha`, `:alpha`
-  - Passes `FIRMWARE_SHA=<short-sha>` build arg → firmware version becomes `Sunray,...-alpha.<sha>`
-- Release tag push: tags `:sha`, `:version`, `:latest` (no FIRMWARE_SHA → clean version)
 - Uses GitHub Actions cache for layer caching
 
-### Release channels
+### Release streams (5-stream model)
 
-| Channel | Image tag | Trigger | Target mowers |
+| Stream | Image tags | Trigger | Mowers |
 |---|---|---|---|
-| alpha | `:alpha` | Every push to `main` | batman (guinea pig) |
-| release | `:latest` + `:vX.Y.Z` | Git tag push | All mowers |
+| **alpha** | `:alpha`, `:feature-<name>`, `:sha-<sha>` | Push to `feature/*` branch | Dev mowers |
+| **beta** | `:beta`, `:sha-<sha>` | Push to `main` (merged PR) | batman |
+| **release** | `:latest`, `:<version>`, `:sha-<sha>` | `v*` tag push | Production mowers |
+| **upstream-alpha** | `:upstream-alpha`, `:upstream-alpha-<tag>`, `:sha-<sha>` | `upstream-alpha-*` tag push | Manual testing |
+| **upstream-release** | `:upstream-release`, `:upstream-<version>`, `:sha-<sha>` | `upstream-v*` tag push | Manual testing |
+
+### Tag rules
+- `FIRMWARE_SHA` build arg is set for `alpha` and `beta` builds → version string includes sha
+- `FIRMWARE_SHA` is empty for `release` and `upstream-*` builds → clean version string
+- Tags `v*` and `upstream-*` only. Bare tags (e.g. `*`) no longer trigger builds.
 
 ### Development workflow
 
-1. Each feature/fix gets its **own PR branch**
-2. PR merge to `main` triggers CI → `:alpha` tag → batman auto-updates
+1. Each feature/fix gets its **own `feature/*` branch** → CI builds `:alpha` + `:feature-<name>`
+2. PR merge to `main` triggers CI → `:beta` tag → batman auto-updates
 3. Test on batman, verify logs (`ssh batman "sudo journalctl -u sunray.service -f"`)
-4. Once validated, create a git tag to promote to `:latest` for all mowers
+4. Once validated, push a `vX.Y.Z` tag → `:latest` promoted for all production mowers
 5. **Never build locally** — always use CI. No native builds on workstation or mower.
 
 ## Deploy to mower (Podman + Quadlet)
