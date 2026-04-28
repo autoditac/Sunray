@@ -198,10 +198,16 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    //
    // Strategy:
    //   Forward/reverse tracking (linear != 0):
-   //     Clamp the inner wheel to MIN_WHEEL_SPEED in the direction of
-   //     travel.  The turn is slightly wider than requested but the path
-   //     tracker corrects on the next cycle.  No counter-rotation — that
-   //     was too aggressive and caused oscillation + stall cascades.
+   //     Clamp the inner wheel MAGNITUDE to MIN_WHEEL_SPEED.  The sign is
+   //     chosen by the wide-band rule below: inside |v_inner| < SIGN_BAND
+   //     the clamp follows linearSpeedSet (avoids accidental near-zero
+   //     counter-rotation from PID jitter); outside SIGN_BAND the clamp
+   //     follows the geometric sign, which means a legitimately negative
+   //     inner-wheel speed during a sharp turn is preserved and clamped
+   //     to -MIN_WHEEL_SPEED — counter-rotation is avoided only in the
+   //     near-zero band, not for genuine turn geometry.  The turn is
+   //     slightly wider than requested but the path tracker corrects on
+   //     the next cycle.
    //
    //   Rotation in place (linear ≈ 0):
    //     Counter-rotate both wheels at ±MIN_WHEEL_SPEED so the heavy
@@ -266,7 +272,16 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
        //     stall (right wheel stuck at -1.3 RPM in dead zone).
        //   * PR #25 (218e0fc) - latched-sign hysteresis; correct mid-MOW
        //     but state goes stale across op transitions.
-       const float SIGN_BAND = 0.040f;  // < MIN_WHEEL_SPEED (0.050), > PID noise (~0.005)
+       // Derive SIGN_BAND from MIN_WHEEL_SPEED so the relationship survives
+       // future config tuning.  0.8 * MIN_WHEEL_SPEED keeps the band well
+       // above PID noise (~0.005 m/s) while staying strictly below the
+       // clamp threshold; if MIN_WHEEL_SPEED is later tuned down toward
+       // PID noise the static_assert will surface the conflict.
+       constexpr float SIGN_BAND = 0.8f * MIN_WHEEL_SPEED;
+       static_assert(SIGN_BAND < MIN_WHEEL_SPEED,
+                     "SIGN_BAND must be strictly below MIN_WHEEL_SPEED");
+       static_assert(SIGN_BAND > 0.010f,
+                     "SIGN_BAND must stay above PID-noise floor (~0.005 m/s)");
        const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
        auto pickSign = [&](float v) {
          return (fabs(v) < SIGN_BAND) ? linearSign : ((v < 0) ? -1.0f : 1.0f);
