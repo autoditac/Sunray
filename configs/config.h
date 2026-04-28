@@ -478,8 +478,13 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 #define TARGET_ANGLE_TOLERANCE 20
 
 // stanley control for path tracking - determines gain how fast to correct for lateral path errors
-#define STANLEY_CONTROL_P_NORMAL  3.0   // 3.0 for path tracking control (angular gain) when mowing
-#define STANLEY_CONTROL_K_NORMAL  1.0   // 1.0 for path tracking control (lateral gain) when mowing
+// NOTE: Alfred (RPi 4B + MS4931 driver) — softer gains than Ardumower upstream because
+// the nose-heavy chassis combined with the MIN_WHEEL_SPEED clamp would otherwise produce
+// yaw oscillation ("nose swinging") on straight runs. K_SOFT raises the denominator in
+// atan2(K*lat, K_SOFT+|v|) so low-speed corrections are not violent.
+#define STANLEY_CONTROL_P_NORMAL  2.0   // 3.0 upstream — reduced for Alfred to limit overshoot
+#define STANLEY_CONTROL_K_NORMAL  0.5   // 1.0 upstream — reduced lateral gain for smoother tracking
+#define STANLEY_CONTROL_K_SOFT    0.2   // 0.001 upstream default — softens corrections at low speed
 
 #define STANLEY_CONTROL_P_SLOW    3.0   // 3.0 for path tracking control (angular gain) when docking tracking
 #define STANLEY_CONTROL_K_SLOW    0.1   // 0.1 for path tracking control (lateral gain) when docking tracking
