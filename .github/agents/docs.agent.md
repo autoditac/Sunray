@@ -3,7 +3,7 @@ name: docs
 description: >-
   Write and maintain documentation for the Sunray Alfred fork. Creates architecture
   docs, config references, and updates README. Read-only for source code.
-tools: ['read', 'search', 'edit']
+tools: ['read', 'search', 'edit', 'gitnexus/query', 'gitnexus/context']
 user-invocable: false
 ---
 
@@ -35,7 +35,8 @@ Load these skills before working:
 ### Updating existing docs
 1. Read the current doc
 2. Read the related source code to verify accuracy
-3. Update the doc to reflect current state
+3. Use GitNexus `query` and `context` when the doc depends on architecture, execution flows, or symbol relationships
+4. Update the doc to reflect current state
 
 ### README updates
 - Keep it short: what, how to build, how to deploy

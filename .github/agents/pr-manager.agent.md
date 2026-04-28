@@ -3,7 +3,7 @@ name: pr-manager
 description: >-
   Create and manage GitHub pull requests for the Sunray fork. Handles branch
   creation, PRs, upstream syncing, and version tagging.
-tools: ['read', 'search', 'execute', 'github-pull-request_create_pull_request']
+tools: ['read', 'search', 'execute', 'github-pull-request_create_pull_request', 'gitnexus/detect_changes']
 user-invocable: false
 ---
 
@@ -20,8 +20,9 @@ Load these skills before working:
 
 ### Creating a PR
 1. Verify the current branch and its diff against `main`
-2. Ensure CI passes (or at least compilation succeeds)
-3. Create the PR with a clear title and description
+2. Use GitNexus `detect_changes` when the branch includes code or config changes so the PR summary reflects affected symbols and flows
+3. Ensure CI passes (or at least compilation succeeds)
+4. Create the PR with a clear title and description
 
 ### Syncing upstream
 1. `git fetch upstream`

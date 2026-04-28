@@ -49,13 +49,25 @@ Sunray is a C++ firmware for RTK-GPS robot mowers, originally targeting Arduino 
 
 ## Config Management
 
+### ⚠️ CRITICAL: `configs/config.h` is the deployed config
+
+**ALL deployments use `configs/config.h` — this is the only config file baked into the Docker image.**
+
+The Dockerfile (L24) hardcodes: `cmake -DCONFIG_FILE=/build/Sunray/configs/config.h ..`
+
+Changes to `linux/config_alfred.h` (the upstream template) do **NOT** affect deployed mowers. If you tune Stanley gains, wheel speeds, or any config value:
+
+1. Edit `configs/config.h` (the actual deployed file)
+2. Keep `linux/config_alfred.h` in sync as a template reference for next upstream merge
+3. Never assume config changes take effect without editing `configs/config.h`
+
 ### Shared config: `configs/config.h`
 
 Single config file for all Alfred mowers. Customized copy of the upstream template `linux/config_alfred.h`.
 
 ### Upstream template: `linux/config_alfred.h`
 
-Reference file from upstream. When upstream adds new options, merge them into `configs/config.h`.
+Reference file from upstream. When upstream adds new options, merge them into `configs/config.h`. This file is **not used in the Docker build** — it exists only to help track which options come from upstream vs. which are Alfred-specific patches.
 
 ### Config conventions
 
