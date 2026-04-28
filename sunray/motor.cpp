@@ -211,87 +211,72 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    // Docking (approach to station) is excluded so the contact alignment
    // stays precise.
    //
-   // Undocking is ALSO excluded — see issue autoditac/Sunray#20
-   // (2026-04-25, batman).  During reverse undock (v≈-0.1, w≈0.58..0.64)
-   // the geometry puts |rspeed| ≈ 0.004..0.015 m/s, straddling the
-   // NEAR_ZERO_EPS=0.015 boundary.  PID noise (~±0.005 m/s) makes the
-   // sign-decision branch flip every control cycle, alternating rpmRset
-   // between ±4.7 RPM at ~10 Hz.  The MS4931 driver cannot reverse
-   // direction that fast, so the right wheel jitters in place and the
-   // mower stalls leaving the dock.  Upstream (no clamp at all) handles
-   // this maneuver correctly, so disabling the clamp during undock is
-   // safe.  Background on why the clamp exists at all and why we cannot
-   // simply remove it for normal mowing: see note
+   // Undocking is INCLUDED again - see batman 2026-04-28 10:15.
+   // PR #21 had excluded it on the assumption that "upstream (no clamp at
+   // all) handles undock correctly", but on batman the right wheel was
+   // commanded at -1.3 RPM (~ 0.014 m/s, deep in the MS4931 dead zone) for
+   // the entire 4-minute reverse undock - left wheel ran free at 17 RPM,
+   // chassis stalled 50 cm out of the dock.  The clamp must engage during
+   // undock; the original PR #21 motivation (sign-flip jitter at the
+   // NEAR_ZERO_EPS=0.015 boundary) is solved by the wider stateless
+   // SIGN_BAND below.  Background on why the clamp exists at all and why
+   // we cannot simply remove it for normal mowing: see note
    // 2026-04-19-rwheel-stall-min-wheel-speed-clamp.md.
-   if (!maps.isDocking() && !maps.isUndocking()) {
+   if (!maps.isDocking()) {
      float origL = lspeed;
      float origR = rspeed;
      bool adjusted = false;
      if (fabs(linearSpeedSet) > 0.01f) {
-       // Forward/reverse tracking: clamp inner wheel MAGNITUDE to
-       // MIN_WHEEL_SPEED.  The sign must be STABLE — basing it on the raw
+       // Forward/reverse tracking: clamp the inner wheel MAGNITUDE to
+       // MIN_WHEEL_SPEED.  The sign must be STABLE - basing it on the raw
        // inner-wheel speed is unsafe because near-zero rspeed/lspeed
        // flicker around 0 with PID noise.
        //
-       // Observed failure on batman 2026-04-19 22:06:55: v=-0.1, w≈0.5
-       // (reverse-pivot out of dock) gives rspeed≈-0.003 m/s geometrically.
-       // PID-driven w oscillated 0.495..0.525 each tick, flipping sign of
-       // rspeed every cycle.  The old preserve-sign rule then clamped
-       // rpmRset alternately to -4.7 and +4.7 at ~1 Hz.  The MS4931 driver
-       // can not reverse direction that fast, so the right wheel just
-       // jittered a few mm while the left wheel drove Alfred into a
-       // one-wheel turn.
+       // Stateless wide-band rule.  Inside |v_inner| < SIGN_BAND, clamp
+       // in the overall travel direction (linearSign is noise-free and
+       // matches the driver intent: move the chassis fwd/rev while the
+       // outer wheel steers).  Outside the band, follow geometric sign
+       // so a legitimately negative inner speed during a sharp turn
+       // (|rspeed| ~ 0.075 m/s) is preserved.
        //
-       // Stable rule: when the inner wheel sits well inside the dead zone
-       // (|v_inner| < NEAR_ZERO_EPS), clamp it in the direction of
-       // linearSpeedSet — the overall travel direction is noise-free and
-       // matches the driver intent (move the chassis fwd/rev while the
-       // outer wheel steers).  Outside that band, keep the preserved
-       // geometric sign so legitimately negative inner speeds (|rspeed|
-       // approx 9 RPM < MIN, clearly non-noise) are not clobbered — that
-       // was the bug in commit 98a24ab reverted in ba4e4f3.
-       // Hysteresis on the clamped sign decision (issue #24).
+       // SIGN_BAND = 0.040 m/s sits between PID noise (~+/-0.005) and
+       // MIN_WHEEL_SPEED (0.050) with comfortable margin on both sides,
+       // so neither boundary causes per-cycle sign flips.
        //
-       // PR #21 picked the clamp sign per cycle from the current geometric
-       // inner-wheel speed (linearSign deep in the dead zone, sign(speed)
-       // outside).  That branch boundary at NEAR_ZERO_EPS is itself a flip
-       // surface: during op=Mow tight Stanley turns (v=+0.1, w around -0.6),
-       // PID jitter on w drifts rspeed across +/- NEAR_ZERO_EPS every cycle,
-       // so the clamp output alternates +MIN_WHEEL_SPEED, -MIN_WHEEL_SPEED.
-       // Observed on batman 2026-04-25 ~19:41: rpmRset oscillating +/-4.7,
-       // pwmR sign-flipping every few ticks, iR climbing to ~1.08 A while
-       // rpmR sat near zero - silent spin-lock until the operator stopped.
+       // Why stateless: the previous latched-sign hysteresis (PR #25,
+       // commit 218e0fc) used `static` per-wheel sign latches.  That
+       // state survived across operation transitions (idle->undock,
+       // undock->mow, mow->dock-retry).  A latched +1 from the last
+       // forward maneuver could be reused at the start of the next
+       // reverse maneuver, producing exactly the wrong-direction kick
+       // we are trying to prevent.  The wider band makes hysteresis
+       // unnecessary - at any single moment, the geometric sign of v
+       // outside the band is stable (no flip every cycle), and inside
+       // the band linearSign is the right answer.
        //
-       // Fix: latch the last sign per wheel.  Only flip the latched sign
-       // when the unclamped geometric speed clearly exceeds zero in the
-       // opposite direction by SIGN_FLIP_HYSTERESIS.  The hysteresis band
-       // is wider than NEAR_ZERO_EPS (kills PID jitter) but still well
-       // below MIN_WHEEL_SPEED, so a legitimate inner-wheel reversal
-       // during a sharp turn (|rspeed| ~ 0.075 m/s) flips on the next
-       // cycle as before.
-       const float NEAR_ZERO_EPS = 0.015f;        // ~5x observed PID-noise on rspeed
-       const float SIGN_FLIP_HYSTERESIS = 0.040f; // < MIN_WHEEL_SPEED (0.050)
+       // History of failed attempts (regressions kept biting because
+       // each fix only addressed one operating regime):
+       //   * PR #6  (98a24ab, reverted ba4e4f3) - clamp magnitude only;
+       //     flipped legitimate negative inner speeds during MOW.
+       //   * PR #10 (a782720, reverted in #12)  - sign-preserving clamp;
+       //     same flip in the near-zero band.
+       //   * PR #15 (2940988) - branch at NEAR_ZERO_EPS=0.015; PID jitter
+       //     across that boundary flipped sign at 10 Hz during undock.
+       //   * PR #21 (3323fcf) - disabled clamp during undock; today's
+       //     stall (right wheel stuck at -1.3 RPM in dead zone).
+       //   * PR #25 (218e0fc) - latched-sign hysteresis; correct mid-MOW
+       //     but state goes stale across op transitions.
+       const float SIGN_BAND = 0.040f;  // < MIN_WHEEL_SPEED (0.050), > PID noise (~0.005)
        const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
-       static float lastLClampSign = 0.0f;
-       static float lastRClampSign = 0.0f;
-       auto trackSign = [&](float v, float &latched) {
-         if (latched == 0.0f) latched = linearSign;
-         if (fabs(v) >= SIGN_FLIP_HYSTERESIS) {
-           latched = (v < 0) ? -1.0f : 1.0f;
-         }
-         // Inside the hysteresis band: keep the latched sign (anti-jitter).
+       auto pickSign = [&](float v) {
+         return (fabs(v) < SIGN_BAND) ? linearSign : ((v < 0) ? -1.0f : 1.0f);
        };
-       // Always track, even when no clamp fires this cycle, so the latched
-       // sign reflects reality whenever the next clamp engagement happens.
-       trackSign(lspeed, lastLClampSign);
-       trackSign(rspeed, lastRClampSign);
-       (void)NEAR_ZERO_EPS;  // retained for documentation; sign now uses hysteresis
        if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
-         lspeed = lastLClampSign * MIN_WHEEL_SPEED;
+         lspeed = pickSign(lspeed) * MIN_WHEEL_SPEED;
          adjusted = true;
        }
        if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
-         rspeed = lastRClampSign * MIN_WHEEL_SPEED;
+         rspeed = pickSign(rspeed) * MIN_WHEEL_SPEED;
          adjusted = true;
        }
      } else {
