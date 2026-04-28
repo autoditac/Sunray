@@ -73,6 +73,25 @@ Reference file from upstream. When upstream adds new options, merge them into `c
 - **Units**: speeds in m/s, angles in radians, distances in meters (except wheel geometry in cm/mm)
 - **Conditional compilation**: use `#ifdef FEATURE` guards for optional code paths
 - **Comments**: keep inline with existing style — `//` comments, no doxygen
+- **Config comments must be accurate**: comments next to `#define` values in `config.h` must describe the actual semantics as implemented in the source (e.g., if `battery.cpp` uses `||` the comment must say "OR", not "AND"). Misleading comments cause incorrect tuning.
+
+## Battery / Charging — Sign Convention
+
+**All Sunray drivers (SerialRobotDriver, CanRobotDriver, AmRobotDriver, SimRobotDriver) report charging current as positive amperes while the mower is charging.**
+
+Consequently:
+- `BAT_FULL_VOLTAGE` — threshold in volts; undock when battery voltage rises above this level
+- `BAT_FULL_CURRENT` — threshold in **positive** amperes; undock when charging current drops *below* this value (tail current)
+- The upstream default `BAT_FULL_CURRENT -0.1` is dead code on Alfred — a negative threshold is never reached when drivers report positive values
+- Correct Alfred value: `BAT_FULL_CURRENT 0.05` (undock when tail current drops below 50 mA)
+
+## Architecture Notes
+
+### Single-threaded main loop — HTTP blocks PID
+Sunray runs a single-threaded event loop. The HTTP server in `httpserver.cpp` is serviced inside `loop()`. A slow HTTP response (> ~100 ms) directly delays the motor PID cycle (`Ta` measured vs. `maxAllowedMotorPwmDelta` / `TA_MAX`). Observed symptom: `PID Ta=1.04s` log lines and `batman motor error` during docking.
+
+- Polling clients (CaSSAndRA, alfred-dashboard) must use short timeouts and avoid blocking the mower with long-running requests
+- Do not add synchronous file I/O or network calls inside `loop()`
 
 ## Alfred Hardware (SerialRobotDriver)
 

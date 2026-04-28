@@ -27,6 +27,52 @@ You implement Ansible tasks, templates, variables, and handlers for the **alfred
 - **Tags**: Use `tags: [services]` for service/unit file deployments
 - **Notifiers**: Use `notify:` to trigger handlers when files change
 
+## Coding patterns (learned from review)
+
+### nmcli tasks — always use `argv:` not `cmd:`
+WiFi connection names on mowers contain spaces (e.g., `"My Network"`). Shell-splitting a `cmd:` string corrupts the argument. Always pass nmcli commands as an explicit list:
+
+```yaml
+- name: Set WiFi connection
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - con
+      - modify
+      - "{{ alfred_wifi_connection }}"
+      - wifi-sec.psk
+      - "{{ alfred_wifi_password }}"
+```
+
+### Error handling — never use bare `ignore_errors: true`
+`ignore_errors: true` swallows all failures, making genuine errors invisible. Instead, register the result, suppress the task failure with `failed_when: false`, then re-raise only for the specific error condition you cannot prevent (e.g., image not yet pulled):
+
+```yaml
+- name: Start service
+  ansible.builtin.systemd:
+    name: sunray
+    state: started
+  register: service_start_result
+  failed_when: false
+
+- name: Fail if service start failed for unexpected reason
+  ansible.builtin.fail:
+    msg: "Service start failed: {{ service_start_result.msg | default('unknown') }}"
+  when:
+    - service_start_result is failed
+    - service_start_result.msg is not search('Error response from daemon.*No such image')
+```
+
+### Container timezone — always set `TZ` in Quadlet unit files
+Python `datetime.now()` returns UTC when no TZ env var is set in the container. Any container that uses local time for scheduling or display must have an explicit timezone:
+
+```ini
+[Service]
+Environment=TZ=Europe/Copenhagen
+```
+
+Add this to every `.container` Quadlet file that runs Python or Node.js code with time-sensitive logic.
+
 ## When working on mower deployments
 
 1. **Understand current state** — Read `roles/alfred/defaults/main.yml` and `inventory.yml` first
