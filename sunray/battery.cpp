@@ -11,6 +11,14 @@
 #include "buzzer.h"
 #include <Arduino.h>
 
+// Backwards-compatible default for alternate config templates (linux/config_*.h, sunray/config_example.h, …)
+// that do not yet define BAT_FULL_MIN_VOLTAGE. A value of 0.0 disables the min-voltage gate and
+// preserves the original Sunray behaviour for those builds. The deployed configs/config.h sets this
+// to a real threshold (30.0 V) to prevent premature undock when the charger cannot push current.
+#ifndef BAT_FULL_MIN_VOLTAGE
+  #define BAT_FULL_MIN_VOLTAGE 0.0
+#endif
+
 // lithium akkus sollten bis zu einem bestimmten wert CC also constant current geladen werden 
 // und danach mit CV constant voltage
 // um die lebensdauer zu erhöhen kann man die max spannung herabsetzen
@@ -254,8 +262,19 @@ void Battery::run(){
         if (chargingEnabled){
           //if ((timeMinutes > 180) || (chargingCurrent < batFullCurrent)) {   
           // https://github.com/Ardumower/Sunray/issues/32               
-          if (chargingCompletedDelay > 5) {  // chargingCompleted check first after 6 * 5000ms = 30sec. 
-            chargingCompleted = ((chargingCurrent <= batFullCurrent) || (batteryVoltage >= batFullVoltage) || (batteryVoltageSlopeLowCounter > 5)); 
+          if (chargingCompletedDelay > 5) {  // chargingCompleted check first after 6 * 5000ms = 30sec.
+            // Gate the current- and slope-based "charge complete" triggers on a minimum
+            // battery voltage so they cannot fire when the charger merely fails to push
+            // significant current (high dock-contact resistance, sagging supply, etc.).
+            // Without this gate, batman undocked at 27.5 V on 2026-04-29 because diffV
+            // (charger-battery) was only ~0.5 V → I_charge stayed low at ~60–140 mA in
+            // the 60 s prints; individual 5 s samples then dipped at/under BAT_FULL_CURRENT
+            // (50 mA) and the OR-coupled chargingCompleted fired even though the pack was
+            // nowhere near full. The voltage criterion (>= batFullVoltage) is intentionally
+            // not gated.
+            bool currentTaper = (chargingCurrent <= batFullCurrent) && (batteryVoltage >= BAT_FULL_MIN_VOLTAGE);
+            bool slopeFlat    = (batteryVoltageSlopeLowCounter > 5)  && (batteryVoltage >= BAT_FULL_MIN_VOLTAGE);
+            chargingCompleted = (currentTaper || (batteryVoltage >= batFullVoltage) || slopeFlat);
           } 
           else {           
             chargingCompletedDelay++;  
