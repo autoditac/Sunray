@@ -214,8 +214,13 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    //     nose actually pivots.
    //
    #ifdef MIN_WHEEL_SPEED
-   // Docking (approach to station) is excluded so the contact alignment
-   // stays precise.
+   // Both docking and undocking are INCLUDED.  The original gate
+   // (PR #21) excluded dock-approach for "contact alignment precision",
+   // but on batman 2026-04-28 the right wheel stalled ~20 times during
+   // dock approach at world position (-3.6, 1.1) — same MS4931 dead-zone
+   // as the undock case.  The clamp delta (at most MIN_WHEEL_SPEED =
+   // 0.05 m/s) is well below dock-approach geometric tolerance and
+   // pales next to the cost of a stalled drive wheel during docking.
    //
    // Undocking is INCLUDED again - see batman 2026-04-28 10:15.
    // PR #21 had excluded it on the assumption that "upstream (no clamp at
@@ -228,103 +233,101 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    // SIGN_BAND below.  Background on why the clamp exists at all and why
    // we cannot simply remove it for normal mowing: see note
    // 2026-04-19-rwheel-stall-min-wheel-speed-clamp.md.
-   if (!maps.isDocking()) {
-     float origL = lspeed;
-     float origR = rspeed;
-     bool adjusted = false;
-     if (fabs(linearSpeedSet) > 0.01f) {
-       // Forward/reverse tracking: clamp the inner wheel MAGNITUDE to
-       // MIN_WHEEL_SPEED.  The sign must be STABLE - basing it on the raw
-       // inner-wheel speed is unsafe because near-zero rspeed/lspeed
-       // flicker around 0 with PID noise.
-       //
-       // Stateless wide-band rule.  Inside |v_inner| < SIGN_BAND, clamp
-       // in the overall travel direction (linearSign is noise-free and
-       // matches the driver intent: move the chassis fwd/rev while the
-       // outer wheel steers).  Outside the band, follow geometric sign
-       // so a legitimately negative inner speed during a sharp turn
-       // (|rspeed| ~ 0.075 m/s) is preserved.
-       //
-       // SIGN_BAND = 0.040 m/s sits between PID noise (~+/-0.005) and
-       // MIN_WHEEL_SPEED (0.050) with comfortable margin on both sides,
-       // so neither boundary causes per-cycle sign flips.
-       //
-       // Why stateless: the previous latched-sign hysteresis (PR #25,
-       // commit 218e0fc) used `static` per-wheel sign latches.  That
-       // state survived across operation transitions (idle->undock,
-       // undock->mow, mow->dock-retry).  A latched +1 from the last
-       // forward maneuver could be reused at the start of the next
-       // reverse maneuver, producing exactly the wrong-direction kick
-       // we are trying to prevent.  The wider band makes hysteresis
-       // unnecessary - at any single moment, the geometric sign of v
-       // outside the band is stable (no flip every cycle), and inside
-       // the band linearSign is the right answer.
-       //
-       // History of failed attempts (regressions kept biting because
-       // each fix only addressed one operating regime):
-       //   * PR #6  (98a24ab, reverted ba4e4f3) - clamp magnitude only;
-       //     flipped legitimate negative inner speeds during MOW.
-       //   * PR #10 (a782720, reverted in #12)  - sign-preserving clamp;
-       //     same flip in the near-zero band.
-       //   * PR #15 (2940988) - branch at NEAR_ZERO_EPS=0.015; PID jitter
-       //     across that boundary flipped sign at 10 Hz during undock.
-       //   * PR #21 (3323fcf) - disabled clamp during undock; today's
-       //     stall (right wheel stuck at -1.3 RPM in dead zone).
-       //   * PR #25 (218e0fc) - latched-sign hysteresis; correct mid-MOW
-       //     but state goes stale across op transitions.
-       // Derive SIGN_BAND from MIN_WHEEL_SPEED so the relationship survives
-       // future config tuning.  0.8 * MIN_WHEEL_SPEED keeps the band well
-       // above PID noise (~0.005 m/s) while staying strictly below the
-       // clamp threshold; if MIN_WHEEL_SPEED is later tuned down toward
-       // PID noise the static_assert will surface the conflict.
-       constexpr float SIGN_BAND = 0.8f * MIN_WHEEL_SPEED;
-       static_assert(SIGN_BAND < MIN_WHEEL_SPEED,
-                     "SIGN_BAND must be strictly below MIN_WHEEL_SPEED");
-       static_assert(SIGN_BAND > 0.010f,
-                     "SIGN_BAND must stay above PID-noise floor (~0.005 m/s)");
-       const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
-       auto pickSign = [&](float v) {
-         return (fabs(v) < SIGN_BAND) ? linearSign : ((v < 0) ? -1.0f : 1.0f);
-       };
-       if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
-         lspeed = pickSign(lspeed) * MIN_WHEEL_SPEED;
-         adjusted = true;
-       }
-       if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
-         rspeed = pickSign(rspeed) * MIN_WHEEL_SPEED;
-         adjusted = true;
-       }
-     } else {
-       // Rotation in place (linear ≈ 0): counter-rotate for heavy chassis
-       if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= 0 && rspeed < MIN_WHEEL_SPEED
-           && fabs(angularSpeedSet) > 0.01) {
-         if (angularSpeedSet > 0) { // turning left
-           rspeed = MIN_WHEEL_SPEED;
-           lspeed = -MIN_WHEEL_SPEED;
-         } else { // turning right
-           lspeed = MIN_WHEEL_SPEED;
-           rspeed = -MIN_WHEEL_SPEED;
-         }
-         adjusted = true;
-       }
+   float origL = lspeed;
+   float origR = rspeed;
+   bool adjusted = false;
+   if (fabs(linearSpeedSet) > 0.01f) {
+     // Forward/reverse tracking: clamp the inner wheel MAGNITUDE to
+     // MIN_WHEEL_SPEED.  The sign must be STABLE - basing it on the raw
+     // inner-wheel speed is unsafe because near-zero rspeed/lspeed
+     // flicker around 0 with PID noise.
+     //
+     // Stateless wide-band rule.  Inside |v_inner| < SIGN_BAND, clamp
+     // in the overall travel direction (linearSign is noise-free and
+     // matches the driver intent: move the chassis fwd/rev while the
+     // outer wheel steers).  Outside the band, follow geometric sign
+     // so a legitimately negative inner speed during a sharp turn
+     // (|rspeed| ~ 0.075 m/s) is preserved.
+     //
+     // SIGN_BAND = 0.040 m/s sits between PID noise (~+/-0.005) and
+     // MIN_WHEEL_SPEED (0.050) with comfortable margin on both sides,
+     // so neither boundary causes per-cycle sign flips.
+     //
+     // Why stateless: the previous latched-sign hysteresis (PR #25,
+     // commit 218e0fc) used `static` per-wheel sign latches.  That
+     // state survived across operation transitions (idle->undock,
+     // undock->mow, mow->dock-retry).  A latched +1 from the last
+     // forward maneuver could be reused at the start of the next
+     // reverse maneuver, producing exactly the wrong-direction kick
+     // we are trying to prevent.  The wider band makes hysteresis
+     // unnecessary - at any single moment, the geometric sign of v
+     // outside the band is stable (no flip every cycle), and inside
+     // the band linearSign is the right answer.
+     //
+     // History of failed attempts (regressions kept biting because
+     // each fix only addressed one operating regime):
+     //   * PR #6  (98a24ab, reverted ba4e4f3) - clamp magnitude only;
+     //     flipped legitimate negative inner speeds during MOW.
+     //   * PR #10 (a782720, reverted in #12)  - sign-preserving clamp;
+     //     same flip in the near-zero band.
+     //   * PR #15 (2940988) - branch at NEAR_ZERO_EPS=0.015; PID jitter
+     //     across that boundary flipped sign at 10 Hz during undock.
+     //   * PR #21 (3323fcf) - disabled clamp during undock; today's
+     //     stall (right wheel stuck at -1.3 RPM in dead zone).
+     //   * PR #25 (218e0fc) - latched-sign hysteresis; correct mid-MOW
+     //     but state goes stale across op transitions.
+     // Derive SIGN_BAND from MIN_WHEEL_SPEED so the relationship survives
+     // future config tuning.  0.8 * MIN_WHEEL_SPEED keeps the band well
+     // above PID noise (~0.005 m/s) while staying strictly below the
+     // clamp threshold; if MIN_WHEEL_SPEED is later tuned down toward
+     // PID noise the static_assert will surface the conflict.
+     constexpr float SIGN_BAND = 0.8f * MIN_WHEEL_SPEED;
+     static_assert(SIGN_BAND < MIN_WHEEL_SPEED,
+                   "SIGN_BAND must be strictly below MIN_WHEEL_SPEED");
+     static_assert(SIGN_BAND > 0.010f,
+                   "SIGN_BAND must stay above PID-noise floor (~0.005 m/s)");
+     const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
+     auto pickSign = [&](float v) {
+       return (fabs(v) < SIGN_BAND) ? linearSign : ((v < 0) ? -1.0f : 1.0f);
+     };
+     if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
+       lspeed = pickSign(lspeed) * MIN_WHEEL_SPEED;
+       adjusted = true;
      }
-     if (adjusted) {
-       static unsigned long lastLogTime = 0;
-       if (millis() - lastLogTime > 2000) {
-         lastLogTime = millis();
-         CONSOLE.print("MIN_WHEEL_SPEED adj: lin=");
-         CONSOLE.print(linearSpeedSet, 3);
-         CONSOLE.print(" ang=");
-         CONSOLE.print(angularSpeedSet, 3);
-         CONSOLE.print(" L:");
-         CONSOLE.print(origL, 3);
-         CONSOLE.print("->");
-         CONSOLE.print(lspeed, 3);
-         CONSOLE.print(" R:");
-         CONSOLE.print(origR, 3);
-         CONSOLE.print("->");
-         CONSOLE.println(rspeed, 3);
+     if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
+       rspeed = pickSign(rspeed) * MIN_WHEEL_SPEED;
+       adjusted = true;
+     }
+   } else {
+     // Rotation in place (linear ≈ 0): counter-rotate for heavy chassis
+     if (lspeed >= 0 && lspeed < MIN_WHEEL_SPEED && rspeed >= 0 && rspeed < MIN_WHEEL_SPEED
+         && fabs(angularSpeedSet) > 0.01) {
+       if (angularSpeedSet > 0) { // turning left
+         rspeed = MIN_WHEEL_SPEED;
+         lspeed = -MIN_WHEEL_SPEED;
+       } else { // turning right
+         lspeed = MIN_WHEEL_SPEED;
+         rspeed = -MIN_WHEEL_SPEED;
        }
+       adjusted = true;
+     }
+   }
+   if (adjusted) {
+     static unsigned long lastLogTime = 0;
+     if (millis() - lastLogTime > 2000) {
+       lastLogTime = millis();
+       CONSOLE.print("MIN_WHEEL_SPEED adj: lin=");
+       CONSOLE.print(linearSpeedSet, 3);
+       CONSOLE.print(" ang=");
+       CONSOLE.print(angularSpeedSet, 3);
+       CONSOLE.print(" L:");
+       CONSOLE.print(origL, 3);
+       CONSOLE.print("->");
+       CONSOLE.print(lspeed, 3);
+       CONSOLE.print(" R:");
+       CONSOLE.print(origR, 3);
+       CONSOLE.print("->");
+       CONSOLE.println(rspeed, 3);
      }
    }
    #endif
