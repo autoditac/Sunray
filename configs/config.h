@@ -360,6 +360,13 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 #define BAT_UNDERVOLTAGE  18.9  // battery switch off voltage
 #define BAT_FULL_CURRENT  0.05    // start mowing again at/below this charging current (amps). All Sunray drivers (Serial/Can/Am/Sim) report charging current as POSITIVE, so this is the CV-taper threshold (chargingCompleted triggers when current falls below 50mA). Upstream default of -0.1 was dead code.
 #define BAT_FULL_SLOPE    0.002  // start mowing again below this voltage slope (V/min - choose 0.0 if you have charging issues)
+// Minimum battery voltage required for the current/slope undock criteria to be valid.
+// Background: if dock contact resistance is high or the charger output sags, chargingCurrent
+// can read below BAT_FULL_CURRENT and batteryVoltageSlope can sit near zero even though the
+// pack is far from full (observed on batman 2026-04-29: undock at 27.5 V because diffV between
+// charger and battery was only ~0.5 V → I_charge stayed at 60–140 mA instead of >1 A CC).
+// Voltage-based criteria (BAT_FULL_VOLTAGE) and the BMS hardware cutoff are unaffected.
+#define BAT_FULL_MIN_VOLTAGE 30.0
 
 // https://wiki.ardumower.de/index.php?title=Ardumower_Sunray#Automatic_battery_switch_off
 #define BAT_SWITCH_OFF_IDLE  false         // switch off if idle (JP8 must be set to autom.)
