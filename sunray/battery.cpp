@@ -254,8 +254,17 @@ void Battery::run(){
         if (chargingEnabled){
           //if ((timeMinutes > 180) || (chargingCurrent < batFullCurrent)) {   
           // https://github.com/Ardumower/Sunray/issues/32               
-          if (chargingCompletedDelay > 5) {  // chargingCompleted check first after 6 * 5000ms = 30sec. 
-            chargingCompleted = ((chargingCurrent <= batFullCurrent) || (batteryVoltage >= batFullVoltage) || (batteryVoltageSlopeLowCounter > 5)); 
+          if (chargingCompletedDelay > 5) {  // chargingCompleted check first after 6 * 5000ms = 30sec.
+            // Gate the current- and slope-based "charge complete" triggers on a minimum
+            // battery voltage so they cannot fire when the charger merely fails to push
+            // significant current (high dock-contact resistance, sagging supply, etc.).
+            // Without this gate, batman undocked at 27.5 V on 2026-04-29 because diffV
+            // (charger-battery) was only ~0.5 V → I_charge stayed at 60–140 mA which is
+            // <= BAT_FULL_CURRENT even though the pack was nowhere near full.
+            // The voltage criterion (>= batFullVoltage) is intentionally not gated.
+            bool currentTaper = (chargingCurrent <= batFullCurrent) && (batteryVoltage >= BAT_FULL_MIN_VOLTAGE);
+            bool slopeFlat    = (batteryVoltageSlopeLowCounter > 5)  && (batteryVoltage >= BAT_FULL_MIN_VOLTAGE);
+            chargingCompleted = (currentTaper || (batteryVoltage >= batFullVoltage) || slopeFlat);
           } 
           else {           
             chargingCompletedDelay++;  
