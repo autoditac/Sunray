@@ -287,15 +287,45 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
      static_assert(SIGN_BAND > 0.010f,
                    "SIGN_BAND must stay above PID-noise floor (~0.005 m/s)");
      const float linearSign = (linearSpeedSet < 0) ? -1.0f : 1.0f;
-     auto pickSign = [&](float v) {
-       return (fabs(v) < SIGN_BAND) ? linearSign : ((v < 0) ? -1.0f : 1.0f);
+
+     // STAGE 0 sign-latch (issue #36): inside SIGN_BAND the geometric sign
+     // is dominated by PID noise (raw v jitters between e.g. 0.039 and
+     // 0.041, flipping the clamped sign every cycle).  Latch the most
+     // recent CONFIDENT sign (from a sample with |v| >= SIGN_BAND) for
+     // 250 ms and reuse it while inside the band.  Reset latches when
+     // linearSign flips - this is the failure mode that killed PR #25
+     // (latched +1 from a forward maneuver leaking into the next reverse).
+     constexpr unsigned long SIGN_LATCH_HOLD_MS = 250;
+     static float lSignLatch = 0.0f;
+     static float rSignLatch = 0.0f;
+     static unsigned long lSignLatchTime = 0;
+     static unsigned long rSignLatchTime = 0;
+     static float lastLinearSign = 0.0f;
+     if (linearSign != lastLinearSign) {
+       lSignLatch = 0.0f;
+       rSignLatch = 0.0f;
+       lastLinearSign = linearSign;
+     }
+     // Snapshot millis() once so both the refresh and the freshness check use the
+     // same timestamp (and both wheels see identical 'now' within this call).
+     const unsigned long signLatchNow = millis();
+     auto pickSignLatched = [&](float v, float &latch, unsigned long &latchTime) {
+       if (fabs(v) >= SIGN_BAND) {
+         // confident sample: refresh latch from geometric sign
+         latch = (v < 0) ? -1.0f : 1.0f;
+         latchTime = signLatchNow;
+         return latch;
+       }
+       // inside SIGN_BAND: use latch if still fresh, else fall back to linearSign
+       if (latch != 0.0f && (signLatchNow - latchTime) < SIGN_LATCH_HOLD_MS) return latch;
+       return linearSign;
      };
      if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
-       lspeed = pickSign(lspeed) * MIN_WHEEL_SPEED;
+       lspeed = pickSignLatched(lspeed, lSignLatch, lSignLatchTime) * MIN_WHEEL_SPEED;
        adjusted = true;
      }
      if (fabs(rspeed) < MIN_WHEEL_SPEED && fabs(lspeed) >= MIN_WHEEL_SPEED) {
-       rspeed = pickSign(rspeed) * MIN_WHEEL_SPEED;
+       rspeed = pickSignLatched(rspeed, rSignLatch, rSignLatchTime) * MIN_WHEEL_SPEED;
        adjusted = true;
      }
    } else {
