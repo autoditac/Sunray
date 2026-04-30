@@ -306,15 +306,18 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
        rSignLatch = 0.0f;
        lastLinearSign = linearSign;
      }
+     // Snapshot millis() once so both the refresh and the freshness check use the
+     // same timestamp (and both wheels see identical 'now' within this call).
+     const unsigned long signLatchNow = millis();
      auto pickSignLatched = [&](float v, float &latch, unsigned long &latchTime) {
        if (fabs(v) >= SIGN_BAND) {
          // confident sample: refresh latch from geometric sign
          latch = (v < 0) ? -1.0f : 1.0f;
-         latchTime = millis();
+         latchTime = signLatchNow;
          return latch;
        }
        // inside SIGN_BAND: use latch if still fresh, else fall back to linearSign
-       if (latch != 0.0f && millis() - latchTime < SIGN_LATCH_HOLD_MS) return latch;
+       if (latch != 0.0f && (signLatchNow - latchTime) < SIGN_LATCH_HOLD_MS) return latch;
        return linearSign;
      };
      if (fabs(lspeed) < MIN_WHEEL_SPEED && fabs(rspeed) >= MIN_WHEEL_SPEED) {
