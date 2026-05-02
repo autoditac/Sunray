@@ -351,12 +351,12 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 //#define CURRENT_FACTOR 1.98   // PCB1.4 (non-bridged INA169, max. 2.5A)
 //#define CURRENT_FACTOR 2.941  // PCB1.4 (bridged INA169, max. 5A)
 
-#define GO_HOME_VOLTAGE   27.0  // start going to dock below this voltage
+#define GO_HOME_VOLTAGE   26.0  // start going to dock below this voltage
 // Charge-complete / undock thresholds: charging is declared complete and mowing may resume
 // when ANY configured criterion is met (battery voltage at/above BAT_FULL_VOLTAGE, charging
 // current at/below BAT_FULL_CURRENT, or |voltage slope| at/below BAT_FULL_SLOPE for several cycles).
 // See sunray/battery.cpp chargingCompleted = (... || ... || ...).
-#define BAT_FULL_VOLTAGE  32.0  // start mowing again at this voltage (raised above CV plateau ~31.7V so the slope/current criteria become dominant; BMS hardware cutoff remains the safety net)
+#define BAT_FULL_VOLTAGE  31.0  // start mowing again at this voltage (above CV plateau ~29.8V; BMS hardware cutoff remains the safety net)
 #define BAT_UNDERVOLTAGE  18.9  // battery switch off voltage
 #define BAT_FULL_CURRENT  0.05    // start mowing again at/below this charging current (amps). All Sunray drivers (Serial/Can/Am/Sim) report charging current as POSITIVE, so this is the CV-taper threshold (chargingCompleted triggers when current falls below 50mA). Upstream default of -0.1 was dead code.
 #define BAT_FULL_SLOPE    0.002  // start mowing again below this voltage slope (V/min - choose 0.0 if you have charging issues)
