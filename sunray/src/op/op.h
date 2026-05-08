@@ -126,6 +126,12 @@ class MowOp: public Op {
   public:
     bool lastMapRoutingFailed;
     int mapRoutingFailedCounter;
+    // Track consecutive obstacle triggers so we can alternate escape direction.
+    // If we just finished an EscapeReverse and immediately hit another obstacle,
+    // the obstacle is likely behind the rover (rover was reversing into it) — try
+    // EscapeForward instead. Same logic in reverse for EscapeForward.
+    unsigned long lastObstacleTime;
+    int consecutiveObstacleCounter;
     MowOp();
     virtual String name() override;
     virtual void begin() override;
