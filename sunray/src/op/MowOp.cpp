@@ -187,6 +187,18 @@ void MowOp::onObstacle(){
         }
     }
     if ((OBSTACLE_AVOIDANCE) && (maps.wayMode != WAY_DOCK)){
+        // Give up after too many failed escapes in a row — both directions failed,
+        // rover is genuinely wedged. Trip the error op so the operator is notified
+        // instead of grinding mechanics forever.
+        const int MAX_CONSECUTIVE_ESCAPES = 6;
+        if (consecutiveObstacleCounter >= MAX_CONSECUTIVE_ESCAPES){
+            CONSOLE.print("error: stuck — ");
+            CONSOLE.print(consecutiveObstacleCounter);
+            CONSOLE.println(" consecutive escape attempts failed within retry window");
+            stateEstimator.stateSensor = SENS_OBSTACLE;
+            changeOp(errorOp);
+            return;
+        }
         // Alternate escape direction when the last attempt failed quickly.
         if (consecutive && (previousOp == &escapeReverseOp)){
             CONSOLE.println("alternate escape: previous was Reverse → trying Forward (obstacle likely behind)");
