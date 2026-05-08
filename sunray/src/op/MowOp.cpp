@@ -16,6 +16,8 @@
 MowOp::MowOp(){
     lastMapRoutingFailed = false;
     mapRoutingFailedCounter = 0;
+    lastObstacleTime = 0;
+    consecutiveObstacleCounter = 0;
 }
 
 String MowOp::name(){
@@ -164,19 +166,41 @@ void MowOp::onObstacle(){
       return;
     }
     CONSOLE.println("triggerObstacle");      
-    stats.statMowObstacles++;      
-    if (maps.isDocking()) {    
+    stats.statMowObstacles++;
+
+    // Track consecutive obstacle triggers within a short window. If the previous escape
+    // was a reverse and we got stuck again immediately, the obstacle is likely behind us
+    // (rover reversed into it) — alternate to forward escape. Same in reverse for forward.
+    // See batman 2026-05-08 15:49–15:52: rover reversed into a steel pole, then ran an
+    // endless EscapeReverse loop pressing itself harder against the pole.
+    const unsigned long now = millis();
+    const unsigned long ESCAPE_RETRY_WINDOW_MS = 15000;
+    bool consecutive = (lastObstacleTime != 0) && ((now - lastObstacleTime) < ESCAPE_RETRY_WINDOW_MS);
+    if (consecutive) consecutiveObstacleCounter++;
+    else             consecutiveObstacleCounter = 0;
+    lastObstacleTime = now;
+
+    if (maps.isDocking()) {
         if (maps.retryDocking(stateEstimator.stateX, stateEstimator.stateY)) {
-            changeOp(escapeReverseOp, true);                      
+            changeOp(escapeReverseOp, true);
             return;
         }
-    } 
-    if ((OBSTACLE_AVOIDANCE) && (maps.wayMode != WAY_DOCK)){    
-        changeOp(escapeReverseOp, true);      
-    } else {     
+    }
+    if ((OBSTACLE_AVOIDANCE) && (maps.wayMode != WAY_DOCK)){
+        // Alternate escape direction when the last attempt failed quickly.
+        if (consecutive && (previousOp == &escapeReverseOp)){
+            CONSOLE.println("alternate escape: previous was Reverse → trying Forward (obstacle likely behind)");
+            changeOp(escapeForwardOp, true);
+        } else if (consecutive && (previousOp == &escapeForwardOp)){
+            CONSOLE.println("alternate escape: previous was Forward → trying Reverse (obstacle likely ahead)");
+            changeOp(escapeReverseOp, true);
+        } else {
+            changeOp(escapeReverseOp, true);
+        }
+    } else {
         stateEstimator.stateSensor = SENS_OBSTACLE;
-        CONSOLE.println("error: obstacle!");            
-        changeOp(errorOp);                
+        CONSOLE.println("error: obstacle!");
+        changeOp(errorOp);
     }
 }
     
