@@ -99,10 +99,17 @@ void SerialRobotDriver::begin(){
 
     // LEDs
     CONSOLE.println("turning LEDs green");
-    if (!setLedState(1, true, false)){
+#ifndef OS_OWNS_WIFI_LED
+    bool ledPanelResponding = setLedState(1, true, false);
+#else
+    bool ledPanelResponding = setLedState(2, true, false);
+#endif
+    if (!ledPanelResponding){
       CONSOLE.println("LED panel communication failed - assuming no LED panel installed");
     }
+#ifndef OS_OWNS_WIFI_LED
     setLedState(2, true, false);
+#endif
     setLedState(3, true, false);
   
     // start ADC
@@ -442,7 +449,9 @@ void SerialRobotDriver::processComm(){
 
 void SerialRobotDriver::updatePanelLEDs(){
   if (ledStateShutdown) {
+#ifndef OS_OWNS_WIFI_LED
     setLedState(1, false, false);
+#endif
     setLedState(2, false, false);
     setLedState(3, false, false);        
     return;    
@@ -463,6 +472,7 @@ void SerialRobotDriver::updatePanelLEDs(){
   } else {
     setLedState(3, false, false);    
   }
+#ifndef OS_OWNS_WIFI_LED
   // wifi status
   if (ledStateWifiConnected){ 
     setLedState(1, true, false);
@@ -471,6 +481,7 @@ void SerialRobotDriver::updatePanelLEDs(){
   } else {
     setLedState(1, false, false);
   }
+#endif
 }
 
 void SerialRobotDriver::run(){  

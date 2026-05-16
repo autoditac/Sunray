@@ -38,7 +38,7 @@ Remove all WiFi management from the Sunray firmware. The OS owns WiFi entirely:
 | Power save | `/etc/NetworkManager/conf.d/wifi-powersave.conf` — disabled |
 | Band selection | `nmcli con modify ... 802-11-wireless.band bg` — forced 2.4 GHz |
 | Regulatory domain | `cfg80211.ieee80211_regdom=DK` in kernel cmdline |
-| WiFi status LED | Kernel `ledtrig-netdev` module on ACT LED — solid when linked, blinks on rx/tx |
+| WiFi status LED | `alfred-ansible` `wifi-led.service`; default panel backend drives external LED 1 via PCA9555, ACT backend remains a single-color fallback |
 
 All of these are deployed and persisted via the [alfred-ansible](https://github.com/autoditac/alfred-ansible) role (`tuning` tag).
 
@@ -56,3 +56,16 @@ All of these are deployed and persisted via the [alfred-ansible](https://github.
 - [`a50ca74`](https://github.com/autoditac/alfred-ansible/commit/a50ca74) — WiFi LED indicator via kernel `ledtrig-netdev`
 - [ADR-006](ADR-006-Process-Fork-Removal.md) — Process fork removal (parent decision)
 - [ADR-008](ADR-008-OS-Kernel-Tuning.md) — OS-level tuning (WiFi power save, band, regdomain)
+
+### 2026-05-16 update: external panel LED
+
+The original OS-level implementation used the Raspberry Pi `ACT` LED through the
+kernel `ledtrig-netdev` trigger. Fleet validation showed that `batman`, `alfred`,
+and `robin` expose the mower panel PCA9555 expander at `/dev/i2c-1` behind
+TCA9548A mux `0x70` channel 0, address `0x22`, with WiFi LED 1 mapped to
+green P0.0 and red P0.1.
+
+The OS-level owner is now `wifi-led.service` from `alfred-ansible`. It derives
+status from NetworkManager and writes the panel LED directly. The Alfred Sunray
+configuration defines `OS_OWNS_WIFI_LED`, so the firmware keeps updating panel
+LEDs 2 and 3 while leaving LED 1 to the host OS.
