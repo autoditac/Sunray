@@ -45,7 +45,7 @@ All of these are deployed and persisted via the [alfred-ansible](https://github.
 ## Consequences
 
 - Firmware has zero WiFi-related code paths in the control loop
-- WiFi LED reacts instantly to link state changes (kernel trigger vs 7 s polling)
+- WiFi LED reacts to NetworkManager state through the OS-owned `wifi-led.service`; the panel backend drives the external LED directly instead of firmware polling
 - WiFi configuration is declarative and version-controlled in the Ansible role
 - `wpa_cli` is not needed in the container image (smaller image, fewer dependencies)
 - If WiFi drops, NetworkManager reconnects automatically — the firmware does not need to know
@@ -53,7 +53,7 @@ All of these are deployed and persisted via the [alfred-ansible](https://github.
 ## References
 
 - [`21de4d6`](https://github.com/autoditac/Sunray/commit/21de4d6) — Disable `updateWifiConnectionState()`, replace Process forks with direct sysfs
-- [`a50ca74`](https://github.com/autoditac/alfred-ansible/commit/a50ca74) — WiFi LED indicator via kernel `ledtrig-netdev`
+- [`a50ca74`](https://github.com/autoditac/alfred-ansible/commit/a50ca74) — original WiFi LED indicator via kernel `ledtrig-netdev`
 - [ADR-006](ADR-006-Process-Fork-Removal.md) — Process fork removal (parent decision)
 - [ADR-008](ADR-008-OS-Kernel-Tuning.md) — OS-level tuning (WiFi power save, band, regdomain)
 

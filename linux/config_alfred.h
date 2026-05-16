@@ -255,6 +255,7 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // https://wiki.ardumower.de/index.php?title=Ardumower_Sunray#Bluetooth_BLE_UART_module
 
 #define START_AP  false             // should WIFI module start its own access point? 
+#define OS_OWNS_WIFI_LED 1        // Alfred host OS drives external panel LED 1 for WiFi status
 //#define WIFI_IP   192,168,2,16      // choose IP e.g. 192,168,4,1  (comment out for dynamic IP/DHCP) - NOTE: use commans instead of points
 #define WIFI_SSID "ssid"            // choose WiFi network ID
 #define WIFI_PASS "pass"      // choose WiFi network password
