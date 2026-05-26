@@ -39,8 +39,18 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -x c")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=implicit-function-declaration")
 
 # SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -x c -I /usr/include/libnl3/")
-SET(CMAKE_BUILD_TYPE Debug)
-#SET(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+
+option(ENABLE_STEER_LOG "Enable high-volume steering diagnostics" OFF)
+if(ENABLE_STEER_LOG)
+    message(STATUS "STEER_LOG instrumentation enabled")
+    add_definitions(-DENABLE_STEER_LOG=1)
+else()
+    message(STATUS "STEER_LOG instrumentation disabled")
+endif()
 
 # set(DL_LIB_DIR "/lib/arm-linux-gnueabihf") 
 
@@ -82,7 +92,7 @@ configure_file(${CONFIG_FILE} ${FIRMWARE_PATH}/config.h COPYONLY)
 
 # Alpha build: pass short commit SHA into firmware version string
 if (DEFINED FIRMWARE_SHA AND NOT FIRMWARE_SHA STREQUAL "")
-    message(STATUS "Alpha build: FIRMWARE_SHA=${FIRMWARE_SHA}")
+    message(STATUS "Firmware SHA suffix enabled: FIRMWARE_SHA=${FIRMWARE_SHA}")
     add_definitions(-DFIRMWARE_SHA="${FIRMWARE_SHA}")
 endif()
 

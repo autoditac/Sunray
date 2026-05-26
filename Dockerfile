@@ -18,11 +18,13 @@ COPY linux/ linux/
 COPY configs/ configs/
 
 ARG FIRMWARE_SHA=""
+ARG ENABLE_STEER_LOG=0
 
 RUN cd linux \
     && mkdir -p build && cd build \
     && cmake -DCMAKE_BUILD_TYPE=Release -DCONFIG_FILE=/build/Sunray/configs/config.h \
-             -DFIRMWARE_SHA="${FIRMWARE_SHA}" .. \
+             -DFIRMWARE_SHA="${FIRMWARE_SHA}" \
+             -DENABLE_STEER_LOG="${ENABLE_STEER_LOG}" .. \
     && make -j$(nproc)
 
 # Build serial low_latency helper

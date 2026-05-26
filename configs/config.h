@@ -179,9 +179,11 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // difference between encoder yaw rate and IMU yaw rate directly reveals
 // traction slip.  Output goes to CONSOLE (captured by journald on the
 // Pi).  Expected volume ≈ 10 lines/s ≈ 7 MB per hour — journald's
-// SystemMaxUse limit absorbs this without rotation impact.  Remove this
-// define to silence the logger without recompiling other code paths.
+// SystemMaxUse limit absorbs this without rotation impact.
+// Alpha/beta CI enables this via ENABLE_STEER_LOG; release/latest leaves it off.
+#if ENABLE_STEER_LOG
 #define STEER_LOG
+#endif
 
 //#define USE_LINEAR_SPEED_RAMP  true      // use a speed ramp for the linear speed
 #define USE_LINEAR_SPEED_RAMP  false      // do not use a speed ramp 
