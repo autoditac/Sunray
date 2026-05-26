@@ -54,6 +54,7 @@ jobs:
           TAGS="$REGISTRY/$IMAGE:sha-$SHORT_SHA"
           STREAM=""
           FIRMWARE_SHA=""
+          ENABLE_STEER_LOG="0"
 
           if [[ "$GITHUB_REF" == refs/heads/feature/* ]]; then
             FEATURE_NAME="${BRANCH#feature/}"
@@ -65,10 +66,12 @@ jobs:
             STREAM="alpha"
             TAGS="$TAGS,$REGISTRY/$IMAGE:alpha,$REGISTRY/$IMAGE:feature-$SANITIZED_FEATURE_NAME"
             FIRMWARE_SHA="$SHORT_SHA"
+            ENABLE_STEER_LOG="1"
           elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
             STREAM="beta"
             TAGS="$TAGS,$REGISTRY/$IMAGE:beta"
             FIRMWARE_SHA="$SHORT_SHA"
+            ENABLE_STEER_LOG="1"
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             VERSION="${TAG#v}"
             STREAM="release"
@@ -77,6 +80,7 @@ jobs:
             ALPHA_SUFFIX="${TAG#upstream-alpha-}"
             STREAM="upstream-alpha"
             TAGS="$TAGS,$REGISTRY/$IMAGE:upstream-alpha,$REGISTRY/$IMAGE:upstream-alpha-$ALPHA_SUFFIX"
+            ENABLE_STEER_LOG="1"
           elif [[ "$GITHUB_REF" == refs/tags/upstream-v* ]]; then
             VERSION="${TAG#upstream-v}"
             STREAM="upstream-release"
@@ -89,6 +93,7 @@ jobs:
           echo "stream=$STREAM"      >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS"          >> "$GITHUB_OUTPUT"
           echo "firmware_sha=$FIRMWARE_SHA" >> "$GITHUB_OUTPUT"
+          echo "enable_steer_log=$ENABLE_STEER_LOG" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -99,6 +104,7 @@ jobs:
           tags: ${{ steps.release.outputs.tags }}
           build-args: |
             FIRMWARE_SHA=${{ steps.release.outputs.firmware_sha }}
+            ENABLE_STEER_LOG=${{ steps.release.outputs.enable_steer_log }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -106,3 +112,4 @@ jobs:
         run: |
           echo "Stream : ${{ steps.release.outputs.stream }}"
           echo "Tags   : ${{ steps.release.outputs.tags }}"
+          echo "STEER_LOG: ${{ steps.release.outputs.enable_steer_log }}"
