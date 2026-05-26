@@ -181,7 +181,7 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // Pi).  Expected volume ≈ 10 lines/s ≈ 7 MB per hour — journald's
 // SystemMaxUse limit absorbs this without rotation impact.
 // Alpha/beta CI enables this via ENABLE_STEER_LOG; release/latest leaves it off.
-#if ENABLE_STEER_LOG
+#if defined(ENABLE_STEER_LOG) && ENABLE_STEER_LOG
 #define STEER_LOG
 #endif
 

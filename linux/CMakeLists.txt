@@ -50,6 +50,7 @@ if(ENABLE_STEER_LOG)
     add_definitions(-DENABLE_STEER_LOG=1)
 else()
     message(STATUS "STEER_LOG instrumentation disabled")
+    add_definitions(-DENABLE_STEER_LOG=0)
 endif()
 
 # set(DL_LIB_DIR "/lib/arm-linux-gnueabihf") 

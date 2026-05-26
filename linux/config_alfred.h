@@ -190,7 +190,7 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 // PWM, current, Stanley lateral error, and fused/IMU/encoder yaw
 // rates.  Alpha/beta CI enables this via ENABLE_STEER_LOG;
 // release/latest leaves it off.
-#if ENABLE_STEER_LOG
+#if defined(ENABLE_STEER_LOG) && ENABLE_STEER_LOG
 #define STEER_LOG
 #endif
 
